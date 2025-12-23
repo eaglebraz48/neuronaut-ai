@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #0a0f1c;
+  color: white;
+}
+
+/* ---------- Neuronaut link visibility fix ---------- */
+a {
+  color: #6ee7ff; /* cyan / readable */
+  text-decoration: none;
+  font-weight: 500;
+}
+
+a:hover {
+  color: #9ff3ff;
+  text-decoration: underline;
+}
+
+/* Dashboard cards */
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 28px;
+}
+
+/* Section titles inside cards */
+.card h2,
+.card h3 {
+  color: #ffffff;
+}
+
+/* Secondary text */
+.card p {
+  color: #b6c2d9;
+}
+
+/* Primary action links inside cards */
+.card a {
+  display: inline-block;
+  margin-top: 12px;
+  color: #7dd3fc;
+  font-weight: 600;
+}
+
+.card a:hover {
+  color: #bae6fd;
+}
+
+/* Example: .neuronaut-btn class for global button styling */
+.neuronaut-btn {
+  background-color: #38bdf8; /* Neuronaut blue */
+  color: white;
+  padding: 10px 14px;
+  border-radius: 8px; /* Example: Add border radius to match previous button style */
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+  border: none;
+  cursor: pointer;
+}
+
+.neuronaut-btn:hover {
+  background-color: #1e293b; /* Darken on hover */
+}
+
+.neuronaut-btn:focus {
+  outline: none;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
