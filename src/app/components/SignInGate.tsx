@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import PrivacyLiteModal from './PrivacyLiteModal';
+import PrivacyLiteModal from '../privacy-lite/page';
+
 
 export default function SignInGate() {
   const [agreed, setAgreed] = useState(false);
