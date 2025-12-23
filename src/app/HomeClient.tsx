@@ -66,12 +66,24 @@ export default function HomeClient() {
   };
 
   return (
-    /* 🔥 TODO O JSX ORIGINAL DA HOME — SEM ALTERAÇÃO */
-    /* Copia exatamente o JSX que você já tem */
-    /* Nada de lógica fora daqui */
-    /* OMITIDO AQUI POR BREVIDADE — USE O MESMO JSX */
-    /* 👆 NÃO MUDA ESTILO, TEXTO OU HTML */
-    /* Só mudou o arquivo */
-    <></>
+    <main style={{ padding: 48, color: 'white' }}>
+      <h1>{T.welcome}</h1>
+      <p>{T.tagline}</p>
+
+      <div style={{ marginTop: 24 }}>
+        <strong>{T.langLabel}</strong>{' '}
+        <button onClick={() => setLang('en')}>EN</button>{' '}
+        <button onClick={() => setLang('es')}>ES</button>
+      </div>
+
+      <div style={{ marginTop: 32 }}>
+        <Link href={signInHref}>{T.signin}</Link>
+        <br />
+        <Link href={dashHref}>{T.dashboard}</Link>
+        <br />
+        <button onClick={handleGuestClick}>{T.guest}</button>
+        <p style={{ opacity: 0.7 }}>{T.guestNote}</p>
+      </div>
+    </main>
   );
 }
