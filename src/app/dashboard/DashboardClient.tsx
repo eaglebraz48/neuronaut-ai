@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 type Lang = "en" | "es";
 
@@ -42,6 +44,38 @@ export default function DashboardClient() {
   const sp = useSearchParams();
   const lang = (sp.get("lang") as Lang) || "en";
   const L = T[lang];
+
+  const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+      if (!user) {
+        setProfileComplete(false);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("neuronaut_profiles")
+        .select("job_title, industry, status, concern")
+        .eq("id", user.id)
+        .single();
+
+      const complete =
+        !!profile?.job_title &&
+        !!profile?.industry &&
+        !!profile?.status &&
+        !!profile?.concern;
+
+      setProfileComplete(complete);
+    })();
+  }, []);
+
+  const situationHref =
+    profileComplete === false
+      ? `/profile?lang=${lang}`
+      : `/decision?lang=${lang}`;
 
   return (
     <div style={{ maxWidth: 900, margin: "0 auto", paddingTop: 24 }}>
@@ -117,7 +151,7 @@ export default function DashboardClient() {
           <h2 style={{ fontWeight: 600 }}>{L.situationTitle}</h2>
           <p>{L.situationDesc}</p>
           <Link
-            href={`/profile?lang=${lang}`}
+            href={situationHref}
             style={{
               display: "inline-block",
               marginTop: 12,
@@ -190,7 +224,6 @@ export default function DashboardClient() {
         </section>
       </div>
 
-      {/* Animation */}
       <style jsx global>{`
         @keyframes neuronPulse {
           0% {
