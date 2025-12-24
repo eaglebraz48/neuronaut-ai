@@ -1,52 +1,46 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-  const supabase = createMiddlewareClient({ req, res });
+export function middleware(req: NextRequest) {
+  const { pathname, searchParams } = req.nextUrl;
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const { pathname, search } = req.nextUrl;
-  const isAuth = !!session;
-
+  const isAuthPage = pathname.startsWith("/sign-in");
   const isProtected =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/profile') ||
-    pathname.startsWith('/snapshot') ||
-    pathname.startsWith('/paths') ||
-    pathname.startsWith('/decision');
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/snapshot") ||
+    pathname.startsWith("/paths");
 
-  const isSignIn = pathname.startsWith('/sign-in');
+  // Supabase session cookie (default)
+  const hasSession =
+    req.cookies.has("sb-access-token") ||
+    req.cookies.has("sb:token");
 
-  // 🔒 Não logado tentando acessar área protegida → landing
-  if (!isAuth && isProtected) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/';
-    url.search = '';
-    return NextResponse.redirect(url);
+  // 🚫 Deslogado tentando acessar área protegida
+  if (isProtected && !hasSession) {
+    const lang = searchParams.get("lang") || "en";
+    return NextResponse.redirect(
+      new URL(`/sign-in?lang=${lang}`, req.url)
+    );
   }
 
-  // 🔁 Logado tentando acessar /sign-in → dashboard
-  if (isAuth && isSignIn) {
-    const url = req.nextUrl.clone();
-    url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
+  // 🚫 Logado tentando acessar sign-in
+  if (isAuthPage && hasSession) {
+    const lang = searchParams.get("lang") || "en";
+    return NextResponse.redirect(
+      new URL(`/dashboard?lang=${lang}`, req.url)
+    );
   }
 
-  return res;
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/dashboard/:path*',
-    '/profile/:path*',
-    '/snapshot/:path*',
-    '/paths/:path*',
-    '/decision/:path*',
-    '/sign-in',
+    "/dashboard/:path*",
+    "/profile/:path*",
+    "/snapshot/:path*",
+    "/paths/:path*",
+    "/sign-in",
   ],
 };
