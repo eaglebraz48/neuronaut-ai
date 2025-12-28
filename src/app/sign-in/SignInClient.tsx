@@ -4,9 +4,11 @@ import * as React from 'react';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 type Lang = 'en' | 'es';
 const LANGS: readonly Lang[] = ['en', 'es'] as const;
+
 const isLang = (v: string | null): v is Lang =>
   !!v && (LANGS as readonly string[]).includes(v as Lang);
 
@@ -44,6 +46,29 @@ function PageInner() {
   const [status, setStatus] = React.useState<'idle' | 'sent'>('idle');
   const [busy, setBusy] = React.useState(false);
 
+  // ✅ THIS WAS THE MISSING PIECE
+  React.useEffect(() => {
+    // Handle restored session (magic link redirect)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        router.replace(`/dashboard?lang=${lang}`);
+      }
+    });
+
+    // Handle fresh auth events
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session) {
+          router.replace(`/dashboard?lang=${lang}`);
+        }
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [router, lang]);
+
   async function sendMagicLink() {
     if (!email || !email.includes('@')) {
       alert('Please enter a valid email.');
@@ -52,7 +77,7 @@ function PageInner() {
 
     setBusy(true);
     try {
-      const redirectTarget = encodeURIComponent(`/dashboard`);
+      const redirectTarget = encodeURIComponent('/dashboard');
       const redirectTo = `${window.location.origin}/auth/callback?redirect=${redirectTarget}&lang=${lang}`;
 
       const res = await fetch('/api/auth/magic-link', {
@@ -80,8 +105,11 @@ function PageInner() {
 
     setBusy(true);
     try {
-      const { supabase } = await import('@/lib/supabase');
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
       if (error) alert(error.message);
       else router.push(`/dashboard?lang=${lang}`);
     } finally {
@@ -123,7 +151,9 @@ function PageInner() {
             {t.send}
           </button>
 
-          <div style={{ marginTop: 10, opacity: 0.7 }}>Reviewer sign in</div>
+          <div style={{ marginTop: 10, opacity: 0.7 }}>
+            Reviewer sign in
+          </div>
 
           <input
             type="password"
