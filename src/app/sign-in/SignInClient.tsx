@@ -1,93 +1,166 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import * as React from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 type Lang = 'en' | 'es';
+const LANGS: readonly Lang[] = ['en', 'es'] as const;
+const isLang = (v: string | null): v is Lang =>
+  !!v && (LANGS as readonly string[]).includes(v as Lang);
 
-const COPY = {
+const L: Record<Lang, any> = {
   en: {
     title: 'Sign in',
-    subtitle: 'Access your saved progress and recommendations.',
-    note:
-      'Authentication will be enabled soon. For now, continue as guest or explore freely.',
-    guest: 'Continue as guest',
+    email: 'Email',
+    send: 'Send magic link',
     back: '← Back to home',
+    sent: 'Check your email for the login link!',
+    password: 'Password (reviewers only)',
+    signinpw: 'Sign in with password',
+    guest: 'Continue as guest',
   },
   es: {
     title: 'Iniciar sesión',
-    subtitle: 'Accede a tu progreso y recomendaciones guardadas.',
-    note:
-      'La autenticación se activará pronto. Por ahora, continúa como invitado.',
-    guest: 'Continuar como invitado',
+    email: 'Correo',
+    send: 'Enviar enlace mágico',
     back: '← Volver al inicio',
+    sent: '¡Revisa tu correo para el enlace!',
+    password: 'Contraseña (solo revisores)',
+    signinpw: 'Entrar con contraseña',
+    guest: 'Entrar como invitado',
   },
 };
 
-export default function SignInClient() {
+function PageInner() {
   const sp = useSearchParams();
-  const lang = (sp.get('lang') as Lang) || 'en';
-  const T = COPY[lang];
+  const router = useRouter();
+  const lang = isLang(sp.get('lang')) ? (sp.get('lang') as Lang) : 'en';
+  const t = L[lang];
+
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [status, setStatus] = React.useState<'idle' | 'sent'>('idle');
+  const [busy, setBusy] = React.useState(false);
+
+  async function sendMagicLink() {
+    if (!email || !email.includes('@')) {
+      alert('Please enter a valid email.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const redirectTarget = encodeURIComponent(`/dashboard`);
+      const redirectTo = `${window.location.origin}/auth/callback?redirect=${redirectTarget}&lang=${lang}`;
+
+      const res = await fetch('/api/auth/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, redirectTo }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setStatus('sent');
+    } catch (err: any) {
+      alert(err?.message ?? 'Unexpected error.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reviewerLogin() {
+    if (!email || !password) {
+      alert('Enter email + password.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert(error.message);
+      else router.push(`/dashboard?lang=${lang}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function guestLogin() {
+    localStorage.setItem('neuronaut_guest', '1');
+    router.push(`/dashboard?lang=${lang}`);
+  }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        background: '#0a0f1c',
-        color: '#fff',
-        padding: 40,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 420,
-          width: '100%',
-          background: '#0f172a',
-          borderRadius: 16,
-          padding: 30,
-          border: '1px solid #334155',
-        }}
-      >
-        <h1 style={{ fontSize: 28, fontWeight: 700 }}>{T.title}</h1>
-        <p style={{ marginTop: 6, color: '#9fb0c8' }}>{T.subtitle}</p>
+    <div className="flex flex-col items-center gap-6 p-8">
+      <h1>{t.title}</h1>
 
-        <p style={{ marginTop: 20, fontSize: 14, color: '#94a3b8' }}>
-          {T.note}
-        </p>
+      {status === 'sent' ? (
+        <p>{t.sent}</p>
+      ) : (
+        <>
+          <input
+            type="email"
+            value={email}
+            placeholder={t.email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={busy}
+            style={{
+              width: 320,
+              padding: '12px 14px',
+              borderRadius: 8,
+              border: '1px solid #cbd5e1',
+              background: '#fff',
+              color: '#000',
+              fontSize: 16,
+            }}
+          />
 
-        <Link
-          href={`/dashboard?lang=${lang}&guest=1`}
-          style={{
-            display: 'block',
-            marginTop: 24,
-            background: '#38bdf8',
-            color: '#000',
-            padding: '10px 14px',
-            borderRadius: 8,
-            textAlign: 'center',
-            fontWeight: 800,
-            textDecoration: 'none',
-          }}
-        >
-          {T.guest}
-        </Link>
+          <button type="button" onClick={sendMagicLink} disabled={busy}>
+            {t.send}
+          </button>
 
-        <Link
-          href={`/?lang=${lang}`}
-          style={{
-            display: 'block',
-            marginTop: 16,
-            color: '#60a5fa',
-            textDecoration: 'none',
-            fontWeight: 600,
-            textAlign: 'center',
-          }}
-        >
-          {T.back}
-        </Link>
-      </div>
-    </main>
+          <div style={{ marginTop: 10, opacity: 0.7 }}>Reviewer sign in</div>
+
+          <input
+            type="password"
+            value={password}
+            placeholder={t.password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={busy}
+            style={{
+              width: 320,
+              padding: '12px 14px',
+              borderRadius: 8,
+              border: '1px solid #cbd5e1',
+              background: '#fff',
+              color: '#000',
+              fontSize: 16,
+            }}
+          />
+
+          <button type="button" onClick={reviewerLogin} disabled={busy}>
+            {t.signinpw}
+          </button>
+
+          <button type="button" onClick={guestLogin} disabled={busy}>
+            {t.guest}
+          </button>
+        </>
+      )}
+
+      <Link href={`/?lang=${lang}`}>{t.back}</Link>
+    </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense>
+      <PageInner />
+    </Suspense>
   );
 }
