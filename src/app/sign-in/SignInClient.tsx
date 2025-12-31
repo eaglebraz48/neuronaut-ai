@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase';
 
 type Lang = 'en' | 'es';
 const LANGS: readonly Lang[] = ['en', 'es'] as const;
-
 const isLang = (v: string | null): v is Lang =>
   !!v && (LANGS as readonly string[]).includes(v as Lang);
 
@@ -38,36 +37,18 @@ const L: Record<Lang, any> = {
 function PageInner() {
   const sp = useSearchParams();
   const router = useRouter();
-  const lang = isLang(sp.get('lang')) ? (sp.get('lang') as Lang) : 'en';
-  const t = L[lang];
+ const rawLang = sp.get('lang');
+const lang: Lang = isLang(rawLang) ? rawLang : 'en';
+const t = L[lang];
+
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [status, setStatus] = React.useState<'idle' | 'sent'>('idle');
   const [busy, setBusy] = React.useState(false);
 
-  // ✅ THIS WAS THE MISSING PIECE
-  React.useEffect(() => {
-    // Handle restored session (magic link redirect)
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        router.replace(`/dashboard?lang=${lang}`);
-      }
-    });
-
-    // Handle fresh auth events
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (session) {
-          router.replace(`/dashboard?lang=${lang}`);
-        }
-      }
-    );
-
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, [router, lang]);
+  // ❌ NO auto-redirect on mount
+  // Sign-in page must NEVER decide auth state
 
   async function sendMagicLink() {
     if (!email || !email.includes('@')) {
@@ -77,8 +58,7 @@ function PageInner() {
 
     setBusy(true);
     try {
-      const redirectTarget = encodeURIComponent('/dashboard');
-      const redirectTo = `${window.location.origin}/auth/callback?redirect=${redirectTarget}&lang=${lang}`;
+      const redirectTo = `${window.location.origin}/auth/callback?redirect=/dashboard&lang=${lang}`;
 
       const res = await fetch('/api/auth/magic-link', {
         method: 'POST',
@@ -105,13 +85,9 @@ function PageInner() {
 
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) alert(error.message);
-      else router.push(`/dashboard?lang=${lang}`);
+      else router.replace(`/dashboard?lang=${lang}`);
     } finally {
       setBusy(false);
     }
@@ -119,7 +95,7 @@ function PageInner() {
 
   function guestLogin() {
     localStorage.setItem('neuronaut_guest', '1');
-    router.push(`/dashboard?lang=${lang}`);
+    router.replace(`/dashboard?lang=${lang}`);
   }
 
   return (
@@ -147,13 +123,11 @@ function PageInner() {
             }}
           />
 
-          <button type="button" onClick={sendMagicLink} disabled={busy}>
+          <button onClick={sendMagicLink} disabled={busy}>
             {t.send}
           </button>
 
-          <div style={{ marginTop: 10, opacity: 0.7 }}>
-            Reviewer sign in
-          </div>
+          <div style={{ marginTop: 10, opacity: 0.7 }}>Reviewer sign in</div>
 
           <input
             type="password"
@@ -172,11 +146,11 @@ function PageInner() {
             }}
           />
 
-          <button type="button" onClick={reviewerLogin} disabled={busy}>
+          <button onClick={reviewerLogin} disabled={busy}>
             {t.signinpw}
           </button>
 
-          <button type="button" onClick={guestLogin} disabled={busy}>
+          <button onClick={guestLogin} disabled={busy}>
             {t.guest}
           </button>
         </>
