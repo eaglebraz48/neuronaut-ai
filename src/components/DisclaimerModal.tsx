@@ -9,7 +9,8 @@ type Props = {
   persistence?: Persistence;
   productName?: string;
   companyName?: string;
-  onAccepted?: () => void;
+  onAccept?: () => void;
+  onDecline?: () => void;
 };
 
 export default function DisclaimerModal({
@@ -17,7 +18,8 @@ export default function DisclaimerModal({
   persistence = 'local',
   productName = 'Neuronaut',
   companyName = 'Arison8, LLC',
-  onAccepted,
+  onAccept,
+  onDecline,
 }: Props) {
   const KEY = useMemo(
     () => `neuronaut_disclaimer_accepted_v${termsVersion}`,
@@ -62,8 +64,14 @@ export default function DisclaimerModal({
     } finally {
       setOpen(false);
       setScrolled(false);
-      onAccepted?.();
+      onAccept?.();
     }
+  }
+
+  function decline() {
+    setOpen(false);
+    setScrolled(false);
+    onDecline?.();
   }
 
   if (!open) return null;
@@ -217,8 +225,27 @@ export default function DisclaimerModal({
             gap: 10,
           }}
         >
-          <div style={{ fontSize: 12, color: '#64748b' }}>
-            Version: <strong>{termsVersion}</strong>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              Version: <strong>{termsVersion}</strong>
+            </div>
+            {onDecline && (
+              <button
+                onClick={decline}
+                style={{
+                  border: '1px solid #e2e8f0',
+                  background: 'transparent',
+                  color: '#64748b',
+                  borderRadius: 10,
+                  padding: '8px 14px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
+              >
+                Decline
+              </button>
+            )}
           </div>
 
           <button

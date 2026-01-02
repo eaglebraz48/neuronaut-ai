@@ -110,6 +110,8 @@ const COPY = {
   },
 };
 
+const TERMS_VERSION = '2026-01-02';
+
 /* ================= COMPONENT ================= */
 export default function DashboardClientNotes() {
   const sp = useSearchParams();
@@ -123,6 +125,7 @@ export default function DashboardClientNotes() {
   const [checked, setChecked] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [pronoun, setPronoun] = useState<Pronoun>(null);
@@ -130,7 +133,8 @@ export default function DashboardClientNotes() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
-  const [showDisclaimer, setShowDisclaimer] = useState(true);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   const addNote = (text: string) => {
     if (!text) return;
@@ -182,22 +186,137 @@ export default function DashboardClientNotes() {
     });
   };
 
-  useEffect(() => {
-    const guest = localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
+  // Check if user has already accepted current terms version
+  const checkTermsAcceptance = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('terms_acceptance')
+        .select('*')
+        .eq('user_id', uid)
+        .eq('terms_version', TERMS_VERSION)
+        .single();
 
-    if (guest) {
-      setIsGuest(true);
-      setPhase('profile');
-      setChecked(true);
-      return;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking terms:', error);
+        return false;
+      }
+
+      return !!data;
+    } catch (err) {
+      console.error('Error checking terms acceptance:', err);
+      return false;
     }
+  };
 
-    supabase.auth.getSession().then(({ data }) => {
-      const email = data.session?.user?.email ?? null;
-      setUserEmail(email);
-      setPhase(email ? 'confirming' : 'profile');
-      setChecked(true);
-    });
+  // Log terms acceptance to Supabase
+  const logTermsAcceptance = async (uid: string) => {
+    try {
+      const { error } = await supabase
+        .from('terms_acceptance')
+        .insert({
+          user_id: uid,
+          terms_version: TERMS_VERSION,
+          accepted_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.error('Error logging terms acceptance:', error);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Error logging terms acceptance:', err);
+      return false;
+    }
+  };
+
+  // Handle disclaimer acceptance
+  const handleDisclaimerAccept = async () => {
+    if (!isGuest && userId) {
+      // Authenticated user - log to Supabase
+      const success = await logTermsAcceptance(userId);
+      if (success) {
+        setHasAcceptedTerms(true);
+        setShowDisclaimer(false);
+      } else {
+        console.error('Failed to save acceptance');
+        // Still allow them to proceed
+        setHasAcceptedTerms(true);
+        setShowDisclaimer(false);
+      }
+    } else {
+      // Guest mode - create anonymous record in Supabase
+      const anonymousId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      try {
+        const { error } = await supabase
+          .from('terms_acceptance')
+          .insert({
+            user_id: anonymousId,
+            terms_version: TERMS_VERSION,
+            accepted_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          console.error('Error logging guest acceptance:', error);
+        }
+      } catch (err) {
+        console.error('Error logging guest acceptance:', err);
+      } finally {
+        // Always allow them to proceed
+        setHasAcceptedTerms(true);
+        setShowDisclaimer(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const initializeUser = async () => {
+      try {
+        const guest = localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
+
+        if (guest) {
+          setIsGuest(true);
+          setPhase('profile');
+          setShowDisclaimer(true);
+          setHasAcceptedTerms(false);
+          setChecked(true);
+          return;
+        }
+
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session;
+        
+        if (session?.user) {
+          const uid = session.user.id;
+          const email = session.user.email ?? null;
+          
+          setUserId(uid);
+          setUserEmail(email);
+
+          // Check if user has accepted current terms
+          const hasAccepted = await checkTermsAcceptance(uid);
+          setHasAcceptedTerms(hasAccepted);
+          setShowDisclaimer(!hasAccepted);
+          
+          setPhase('confirming');
+        } else {
+          // No auth - show disclaimer
+          setPhase('profile');
+          setShowDisclaimer(true);
+          setHasAcceptedTerms(false);
+        }
+        
+        setChecked(true);
+      } catch (error) {
+        console.error('Error initializing user:', error);
+        setPhase('profile');
+        setChecked(true);
+      }
+    };
+
+    initializeUser();
   }, [sp]);
 
   const handleSend = async () => {
@@ -248,7 +367,14 @@ export default function DashboardClientNotes() {
 
   return (
     <>
-      <DisclaimerModal termsVersion="2026-01-02" persistence="none" />
+      {showDisclaimer && (
+        <DisclaimerModal 
+          termsVersion={TERMS_VERSION}
+          persistence="none"
+          onAccept={handleDisclaimerAccept}
+          onDecline={() => router.push(`/?lang=${lang}`)}
+        />
+      )}
 
       <div style={page}>
         <div className="ghost-symbol" style={ghostSymbol} />
@@ -328,8 +454,13 @@ export default function DashboardClientNotes() {
             </div>
 
             <button
-              style={{ ...primaryBtn, marginTop: 16 }}
-              disabled={!name || !pronoun}
+              style={{ 
+                ...primaryBtn, 
+                marginTop: 16,
+                opacity: (!name || !pronoun || !hasAcceptedTerms) ? 0.5 : 1,
+                cursor: (!name || !pronoun || !hasAcceptedTerms) ? 'not-allowed' : 'pointer'
+              }}
+              disabled={!name || !pronoun || !hasAcceptedTerms}
               onClick={() => setPhase('guided')}
             >
               {T.startTalking}
