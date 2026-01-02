@@ -111,9 +111,6 @@ const COPY = {
 
 /* ================= COMPONENT ================= */
 export default function DashboardClientNotes() {
-
-
-
   const sp = useSearchParams();
   const router = useRouter();
   const lang = (sp.get('lang') as Lang) || 'en';
@@ -132,12 +129,69 @@ export default function DashboardClientNotes() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // ✅ NEW: working notes
+  const [notes, setNotes] = useState<string[]>([]);
+
+  // ✅ NEW: helper to add notes without duplicates
+ const addNote = (text: string) => {
+  if (!text) return;
+
+  // Remove markdown and clean up
+  const clean = text
+    .replace(/\*\*|###|##|#/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Extract key topics/themes using pattern matching
+  const topics: string[] = [];
+
+  // Look for bullet points (most important content)
+  const bulletMatch = clean.match(/[-•*]\s*([^-•*]+?)(?=[-•*]|$)/g);
+  if (bulletMatch) {
+    bulletMatch.slice(0, 4).forEach(bullet => {
+      const topic = bullet
+        .replace(/[-•*]\s*/, '')
+        .split(':')[0] // Take text before colon
+        .split('.')[0] // Take first sentence
+        .trim();
+      if (topic.length > 10 && topic.length < 60) {
+        topics.push(topic);
+      }
+    });
+  }
+
+  // If no bullets, look for key phrases
+  if (topics.length === 0) {
+    const patterns = [
+      /(?:focus on|think about|consider|try)\s+([^.!?]{10,50})/gi,
+      /(?:skills?|strategies|steps?|actions?)[:\s]+([^.!?]{10,50})/gi,
+      /(?:you (?:should|can|might))\s+([^.!?]{10,50})/gi
+    ];
+
+    patterns.forEach(pattern => {
+      const matches = clean.matchAll(pattern);
+      for (const match of matches) {
+        if (match[1] && topics.length < 4) {
+          topics.push(match[1].trim());
+        }
+      }
+    });
+  }
+
+  // Add topics to notes
+  topics.forEach(topic => {
+    setNotes((prev) =>
+      prev.some(n => n.toLowerCase().includes(topic.toLowerCase().substring(0, 15))) 
+        ? prev 
+        : [...prev, topic]
+    );
+  });
+};
 
 
   useEffect(() => {
     const guest =
-      localStorage.getItem('neuronaut_guest') === '1' ||
-      sp.get('guest') === '1';
+      localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
 
     if (guest) {
       setIsGuest(true);
@@ -168,27 +222,30 @@ export default function DashboardClientNotes() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...messages, userMsg],
-          context: { name, pronoun, reason, lang },
+          context: {
+  name,
+  pronoun,
+  reason,
+  lang,
+  mode: 'conversation', // ← THIS
+},
+
         }),
       });
 
       const data = await res.json();
 
       if (data?.reply) {
-        setMessages((prev) => [
-          ...prev,
-          { role: 'assistant', text: data.reply },
-        ]);
+        setMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
+        // ✅ NEW: capture highlights
+        addNote(data.reply);
       }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          text:
-            "I'm here with you. Something went wrong on my side — can you try again?",
-        },
-      ]);
+      const fallback =
+        "I'm here with you. Something went wrong on my side — can you try again?";
+      setMessages((prev) => [...prev, { role: 'assistant', text: fallback }]);
+      // ✅ NEW: capture highlights
+      addNote(fallback);
     } finally {
       setIsLoading(false);
     }
@@ -206,8 +263,7 @@ export default function DashboardClientNotes() {
       <div className="ghost-symbol" style={ghostSymbol} />
 
       <div style={aiOrbWrap}>
-       <div style={{ ...aiOrb, ...pulse }} />
-
+        <div style={{ ...aiOrb, ...pulse }} />
       </div>
 
       <div style={topBar}>
@@ -300,13 +356,31 @@ export default function DashboardClientNotes() {
           {step === 1 && (
             <>
               <div style={question}>{T.q1}</div>
-              <button style={optBtn} onClick={() => { setReason('work'); setStep(2); }}>
+              <button
+                style={optBtn}
+                onClick={() => {
+                  setReason('work');
+                  setStep(2);
+                }}
+              >
                 {T.q1_work}
               </button>
-              <button style={optBtn} onClick={() => { setReason('finance'); setStep(2); }}>
+              <button
+                style={optBtn}
+                onClick={() => {
+                  setReason('finance');
+                  setStep(2);
+                }}
+              >
                 {T.q1_finance}
               </button>
-              <button style={optBtn} onClick={() => { setReason('future'); setStep(2); }}>
+              <button
+                style={optBtn}
+                onClick={() => {
+                  setReason('future');
+                  setStep(2);
+                }}
+              >
                 {T.q1_future}
               </button>
             </>
@@ -315,11 +389,13 @@ export default function DashboardClientNotes() {
           {step === 2 && reason && (
             <>
               <div style={question}>{T[`q2_${reason}` as keyof typeof T]}</div>
-              {(T[`q2_${reason}_opts` as keyof typeof T] as string[]).map((o) => (
-                <button key={o} style={optBtn} onClick={() => setStep(3)}>
-                  {o}
-                </button>
-              ))}
+              {(T[`q2_${reason}_opts` as keyof typeof T] as string[]).map(
+                (o) => (
+                  <button key={o} style={optBtn} onClick={() => setStep(3)}>
+                    {o}
+                  </button>
+                )
+              )}
             </>
           )}
 
@@ -339,7 +415,12 @@ export default function DashboardClientNotes() {
                       ? "Let's unpack the financial stress together."
                       : "Let's get clarity on your direction."
                   }`;
+
                   setMessages([{ role: 'assistant', text: intro }]);
+
+                  // ✅ NEW: capture highlights (intro counts)
+                  addNote(intro);
+
                   setPhase('chat');
                 }}
               >
@@ -352,18 +433,18 @@ export default function DashboardClientNotes() {
 
       {phase === 'chat' && (
         <div style={chatWrapper}>
-       <div style={chatMessages}>
-
+          <div style={chatMessages}>
             {messages.map((m, i) => (
-              <div key={i} style={m.role === 'assistant' ? aiMessage : userMessage}>
+              <div
+                key={i}
+                style={m.role === 'assistant' ? aiMessage : userMessage}
+              >
                 {m.text}
               </div>
             ))}
             {isLoading && (
               <div style={aiMessage}>
                 <em>typing...</em>
-
-
               </div>
             )}
           </div>
@@ -391,27 +472,35 @@ export default function DashboardClientNotes() {
             </div>
           </div>
         </div>
-         )}
-       {/* WORKING NOTES – placeholder */}
-<div
-  style={{
- position: 'fixed',
-left: '38%',
-top: 120,
+      )}
 
-    width: 260,
-    minHeight: 120,
-    borderRadius: 16,
-    background: 'rgba(122,162,255,0.08)',
-    border: '1px dashed rgba(122,162,255,0.4)',
-    color: '#7aa2ff',
-    padding: 16,
-    zIndex: 5,
-  }}
+      {/* WORKING NOTES – now ACTIVE */}
+      <div
+        style={{
+          position: 'fixed',
+          left: '38%',
+          top: 120,
+          width: 260,
+          minHeight: 120,
+          borderRadius: 16,
+          background: 'rgba(122,162,255,0.08)',
+          border: '1px dashed rgba(122,162,255,0.4)',
+          color: '#7aa2ff',
+          padding: 16,
+          zIndex: 5,
+        }}
       >
         <strong>Working Notes</strong>
-        <div style={{ marginTop: 8, fontSize: 13, opacity: 0.7 }}>
-          (placeholder)
+        <div style={{ marginTop: 8, fontSize: 13, opacity: 0.9 }}>
+          {notes.length === 0 ? (
+            <span style={{ opacity: 0.7 }}>(waiting for conversation…)</span>
+          ) : (
+            notes.map((n, i) => (
+              <div key={i} style={{ marginBottom: 6 }}>
+                • {n}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -437,22 +526,21 @@ top: 120,
         @keyframes pulse {
           0% {
             transform: scale(1);
-            box-shadow: 0 0 60px rgba(120,160,255,0.35);
+            box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
           }
           50% {
             transform: scale(1.06);
-            box-shadow: 0 0 95px rgba(120,160,255,0.65);
+            box-shadow: 0 0 95px rgba(120, 160, 255, 0.65);
           }
           100% {
             transform: scale(1);
-            box-shadow: 0 0 60px rgba(120,160,255,0.35);
+            box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
           }
         }
       `}</style>
     </div>
   );
 }
-
 
 /* ================= STYLES ================= */
 const page = {
@@ -622,7 +710,7 @@ const chatInput = {
   color: '#fff',
   border: 'none',
 };
+
 const pulse = {
   animation: 'pulse 3.2s ease-in-out infinite',
 };
-

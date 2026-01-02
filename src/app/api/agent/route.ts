@@ -5,85 +5,98 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-const SYSTEM_PROMPT = `
-You are NEURONAUT — a calm, intelligent, emotionally aware AI guide.
+/* ================= BLOCKED PATTERNS ================= */
+const BLOCKED_PATTERNS = [
+  'suicidal', 'suicide', 'kill myself', 'self harm',
+  'eating disorder', 'anorexia', 'bulimia',
+  'hallucination', 'hearing voices', 'delusion',
+  'bipolar disorder', 'schizophrenia',
+  'cancer diagnosis', 'tumor', 'chest pain', 'heart attack',
+  'medical diagnosis', 'prescription medication',
+  'divorce lawyer', 'custody battle', 'sue someone',
+  'lawsuit', 'court case',
+  'hurt someone', 'kill someone', 'attack someone',
+  'sexual abuse', 'physical abuse', 'domestic violence',
+  'rape', 'assault victim',
+];
 
-ROLE:
-You help users think clearly under pressure.
-You acknowledge emotions, then move toward clarity and action.
-You sound human, grounded, and capable — not clinical, not overly therapeutic.
+/* ================= REDIRECT MESSAGE ================= */
+const REDIRECT_REPLY = `
+I can't help with medical, mental health crisis, legal, or harm-related topics.
 
-STYLE:
-- Be direct and concise.
-- Do NOT agree with everything the user says.
-- Do NOT ask unnecessary permission questions.
-- Avoid therapy-style loops.
+For career and work exploration, I can discuss:
+- General job types and industries
+- Transferable skills
+- High-level career directions
 
-CORE BEHAVIOR:
-1. First, briefly rephrase what the user said to show understanding.
-2. Identify the core problem in plain language.
-3. If the user asks "what should I do" or "how can you help":
-   - Offer concrete options, steps, or suggestions immediately.
-   - Present 2–4 realistic paths when possible.
-4. Ask at most ONE clarifying question, only if it meaningfully changes the advice.
-5. Prefer action and structure over reflection once intent is clear.
-
-QUESTION RULE:
-- Do not ask multiple reflective questions in a row.
-- Do not keep asking how the user feels after the problem is stated.
-- One question max, then move forward.
-
-WHEN TO BE SUPPORTIVE:
-- Acknowledge fear, stress, or uncertainty briefly.
-- Then pivot to what can be done next.
-
-SAFETY (STRICT):
-- You do NOT diagnose, treat, or provide medical, mental health, legal, or financial advice.
-- If the user expresses self-harm, medical symptoms, legal crises, or extreme distress:
-  Respond with care and redirect to appropriate human support.
-
-LANGUAGE:
-- Reply in the same language as the user (English or Spanish).
-- Adapt tone naturally — do not translate mechanically.
-
-ADJUSTMENT SIGNAL:
-- Occasionally include (sparingly, not often):
-  **If I’m missing what you actually need, say it — I’ll adjust.**
+What aspect of work or career direction would you like to explore?
 `;
 
+/* ================= SYSTEM PROMPT ================= */
+const SYSTEM_PROMPT = `
+You are NEURONAUT — a career clarity assistant.
+
+FORMAT RULES:
+- Use **bold** for key concepts
+- Use bullet points (-) for lists
+- Keep answers structured and readable
+
+SCOPE:
+- Career paths and transitions
+- Job types and industries
+- Skill assessment and work anxiety
+- Practical, high-level guidance
+
+AVOID:
+- Medical or legal advice
+- Crisis counseling
+- Investment or stock advice
+- Making decisions for the user
+`;
+
+/* ================= HELPERS ================= */
+function containsBlockedContent(text: string): boolean {
+  const lower = text.toLowerCase();
+  return BLOCKED_PATTERNS.some(term => lower.includes(term));
+}
+
+/* ================= API HANDLER ================= */
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
-    if (!messages || !Array.isArray(messages)) {
+    if (!Array.isArray(messages)) {
       return NextResponse.json(
-        { reply: "I’m here. Tell me a bit more about what’s going on." },
+        { reply: "Tell me what's on your mind about work or career direction." },
         { status: 200 }
       );
     }
 
-    const response = await openai.responses.create({
-      model: 'gpt-4.1-mini',
-      input: [
+    for (const m of messages) {
+      if (m.role === 'user' && typeof m.text === 'string') {
+        if (containsBlockedContent(m.text)) {
+          return NextResponse.json({ reply: REDIRECT_REPLY }, { status: 200 });
+        }
+      }
+    }
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         ...messages.map((m: any) => ({
           role: m.role,
           content: m.text,
         })),
       ],
-      temperature: 0.4,
     });
 
-    const reply = response.output_text ?? '';
+    const reply = response.choices[0]?.message?.content ?? '';
 
-    return NextResponse.json({ reply });
-  } catch (err) {
-    console.error('CHAT API ERROR:', err);
+    return NextResponse.json({ reply }, { status: 200 });
+  } catch {
     return NextResponse.json(
-      {
-        reply:
-          "I’m here with you. Something went wrong on my side — can you try again?",
-      },
+      { reply: "Something went wrong. Please try again." },
       { status: 200 }
     );
   }
