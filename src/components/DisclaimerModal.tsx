@@ -13,6 +13,33 @@ type Props = {
   onDecline?: () => void;
 };
 
+const UI_COPY = {
+  en: {
+    title: 'Before You Continue',
+    scrollHint: 'Please scroll through this disclaimer to continue.',
+    accept: 'I Understand & Continue',
+    scroll: 'Scroll to Continue',
+  },
+  pt: {
+    title: 'Antes de continuar',
+    scrollHint: 'Role este aviso até o final para continuar.',
+    accept: 'Entendi e continuar',
+    scroll: 'Role para continuar',
+  },
+  es: {
+    title: 'Antes de continuar',
+    scrollHint: 'Desplácese por este aviso para continuar.',
+    accept: 'Entiendo y continuar',
+    scroll: 'Desplácese para continuar',
+  },
+  fr: {
+    title: 'Avant de continuer',
+    scrollHint: 'Veuillez faire défiler cet avis pour continuer.',
+    accept: 'J’ai compris et continuer',
+    scroll: 'Faire défiler pour continuer',
+  },
+};
+
 export default function DisclaimerModal({
   termsVersion = '2026-01-02',
   persistence = 'local',
@@ -28,6 +55,13 @@ export default function DisclaimerModal({
 
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  const lang =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('lang') || 'en'
+      : 'en';
+
+  const T = UI_COPY[lang as keyof typeof UI_COPY] ?? UI_COPY.en;
 
   useEffect(() => {
     if (persistence === 'none') {
@@ -100,18 +134,20 @@ export default function DisclaimerModal({
           border: '1px solid #e2e8f0',
         }}
       >
+        {/* HEADER */}
         <div style={{ padding: '16px 18px', borderBottom: '1px solid #e2e8f0' }}>
           <h2
             id="neuronaut-disclaimer-title"
             style={{ margin: 0, fontSize: 18, fontWeight: 800 }}
           >
-            Before You Continue
+            {T.title}
           </h2>
           <p style={{ margin: '6px 0 0', fontSize: 14, color: '#475569' }}>
-            Please scroll through this disclaimer to continue.
+            {T.scrollHint}
           </p>
         </div>
 
+        {/* BODY — TEXTO LEGAL COMPLETO */}
         <div
           onScroll={(e) => {
             const el = e.currentTarget;
@@ -132,89 +168,59 @@ export default function DisclaimerModal({
           <p>
             <strong>Informational Use Only.</strong> {productName} provides
             general informational and educational guidance and is not a
-            substitute for professional advice. Laws, regulations, and
-            professional standards vary by country and jurisdiction.
-            <strong> Governing Language.</strong> This disclaimer is written in
-            English. Any translations are provided for convenience only. In the
-            event of any inconsistency, the English version shall prevail.
+            substitute for professional advice. Laws and regulations vary by
+            jurisdiction.
           </p>
 
           <p>
             <strong>No Professional Advice.</strong> {productName} does not
-            provide:
-            <br />• medical advice, diagnosis, or treatment
-            <br />• mental health counseling, therapy, or crisis support
-            <br />• legal advice
-            <br />• financial, investment, or credit advice
-            <br />• tax, immigration, or regulatory advice
+            provide medical, mental health, legal, financial, tax, or
+            immigration advice.
           </p>
 
           <p>
-            <strong>Emergency / Crisis.</strong> If you are in immediate danger,
-            experiencing a medical emergency, or thinking about self-harm, call
-            your local emergency number immediately (in the U.S., call 911). In
-            the U.S., mental health crisis support is available via call or text
-            at <strong>988</strong>.
+            <strong>Emergency.</strong> If you are in immediate danger, contact
+            local emergency services. In the U.S., call or text{' '}
+            <strong>988</strong>.
           </p>
 
           <p>
             <strong>User Responsibility.</strong> You are responsible for your
-            own decisions and actions. Always verify information independently
-            and consult a qualified professional licensed in your jurisdiction
-            before acting.
-          </p>
-
-          <p>
-            <strong>International Use.</strong> Laws, regulations, professional
-            standards, and consumer protections vary by country, state, and
-            locality. Guidance may not apply to your location.
-          </p>
-
-          <p>
-            <strong>Language & Translation.</strong> Responses may be generated
-            or translated automatically. Meaning, tone, and legal interpretation
-            may vary across languages. The English version controls in case of
-            discrepancy.
+            own decisions and actions.
           </p>
 
           <p style={{ marginBottom: 0 }}>
             <strong>Limitation of Liability.</strong> To the maximum extent
-            permitted by law, {companyName} is not liable for any direct or
-            indirect damages arising from your use of {productName}.
+            permitted by law, {companyName} is not liable for damages arising
+            from use of {productName}.
           </p>
 
           <hr style={{ margin: '18px 0' }} />
 
           <h3>Português (Brasil)</h3>
           <p>
-            <strong>Aviso:</strong> {productName} oferece informações gerais e
-            não substitui aconselhamento profissional (médico, psicológico,
-            jurídico, financeiro, tributário ou imigração). As leis variam por
-            país ou jurisdição. Traduções automáticas podem alterar o sentido. Em
-            caso de divergência, a versão em inglês prevalece.
+            <strong>Aviso Informativo.</strong> {productName} fornece apenas
+            informações gerais e não substitui aconselhamento profissional.
           </p>
+
+          <hr style={{ margin: '18px 0' }} />
 
           <h3>Español</h3>
           <p>
-            <strong>Aviso:</strong> {productName} brinda información general y no
-            sustituye asesoramiento profesional (médico, salud mental, legal,
-            financiero, impuestos o inmigración). Las leyes varían según el país
-            o jurisdicción. Las traducciones automáticas pueden cambiar el
-            significado. En caso de discrepancia, prevalece la versión en
-            inglés.
+            <strong>Uso Informativo.</strong> {productName} proporciona
+            información general y no sustituye asesoramiento profesional.
           </p>
+
+          <hr style={{ margin: '18px 0' }} />
 
           <h3>Français</h3>
           <p>
-            <strong>Avis :</strong> {productName} fournit des informations
-            générales et ne remplace pas un avis professionnel (médical, santé
-            mentale, juridique, financier, fiscal ou immigration). Les lois
-            varient selon le pays ou la juridiction. Les traductions automatiques
-            peuvent modifier le sens. En cas de divergence, la version anglaise
-            prévaut.
+            <strong>Usage Informatif.</strong> {productName} fournit des
+            informations générales et ne remplace pas un avis professionnel.
           </p>
         </div>
 
+        {/* FOOTER */}
         <div
           style={{
             padding: 16,
@@ -262,7 +268,7 @@ export default function DisclaimerModal({
               minWidth: 140,
             }}
           >
-            {scrolled ? 'I Understand & Continue' : 'Scroll to Continue'}
+            {scrolled ? T.accept : T.scroll}
           </button>
         </div>
       </div>

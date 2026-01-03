@@ -16,7 +16,9 @@ async function getLangFromCookie(): Promise<Lang> {
   try {
     const jar = await cookies();
     const v = jar.get("neuronaut_lang")?.value;
-    if (v && (LANGS as readonly string[]).includes(v as Lang)) return v as Lang;
+    if (v && (LANGS as readonly string[]).includes(v as Lang)) {
+      return v as Lang;
+    }
   } catch {}
   return "en";
 }
@@ -26,7 +28,11 @@ export const metadata = {
   description: "Decision clarity in unstable moments.",
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const lang = await getLangFromCookie();
 
   return (
@@ -35,7 +41,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <meta httpEquiv="Content-Language" content={lang} />
         <meta name="content-language" content={lang} />
         <meta name="google" content="notranslate" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
 
       <body

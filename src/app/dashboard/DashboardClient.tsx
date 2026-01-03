@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import DisclaimerModal from '@/components/DisclaimerModal';
 
 /* ================= TYPES ================= */
-type Lang = 'en' | 'es';
+type Lang = 'en' | 'es' | 'pt' | 'fr';
 type Phase = 'confirming' | 'profile' | 'guided' | 'chat';
 type Reason = 'work' | 'finance' | 'future' | null;
 type Pronoun = 'neutral' | 'they' | 'he' | 'she' | null;
@@ -15,9 +15,45 @@ type ChatMessage = {
   role: 'user' | 'assistant';
   text: string;
 };
+type CopySchema = {
+  listening: string;
+  back: string;
+  guest: string;
+  signin: string;
+  signout: string;
+  confirmTitle: string;
+  confirmBtn: string;
+  nameTitle: string;
+  namePlaceholder: string;
+  pronounNeutral: string;
+  pronounThey: string;
+  pronounHe: string;
+  pronounShe: string;
+  startTalking: string;
+  send: string;
+  typing: string;
+  notesTitle: string;
+  notesEmpty: string;
+  q1: string;
+  q1_work: string;
+  q1_finance: string;
+  q1_future: string;
+  q2_work: string;
+  q2_work_opts: string[];
+  q2_finance: string;
+  q2_finance_opts: string[];
+  q2_future: string;
+  q2_future_opts: string[];
+  q3: string;
+  chatPlaceholder: string;
+  grounding: string;
+  intro_work: string;
+  intro_finance: string;
+  intro_future: string;
+};
 
 /* ================= COPY ================= */
-const COPY = {
+const COPY: Record<Lang, CopySchema> = {
   en: {
     listening: 'Agent AI · Listening',
     back: 'Back to start',
@@ -34,6 +70,9 @@ const COPY = {
     pronounShe: 'She / her',
     startTalking: 'Start talking',
     send: 'Send',
+    typing: 'typing…',
+    notesTitle: 'Working Notes',
+    notesEmpty: '(waiting for conversation…)',
     q1: 'Are you here mainly because of:',
     q1_work: 'Work or job uncertainty',
     q1_finance: 'Financial stress',
@@ -62,51 +101,165 @@ const COPY = {
     q3: 'What worries you the most right now?',
     chatPlaceholder: "Tell me what's troubling you…",
     grounding: "I'm here. Take a breath. You're not alone in this.",
+    intro_work: "Alright {name}. Let's talk about what's happening with work.",
+    intro_finance: "Alright {name}. Let's unpack the financial stress together.",
+    intro_future: "Alright {name}. Let's get clarity on your direction.",
   },
+
+  pt: {
+    listening: 'Agente AI · Ouvindo',
+    back: 'Voltar ao início',
+    guest: 'Modo convidado',
+    signin: 'Entrar',
+    signout: 'Sair',
+    confirmTitle: 'Bem-vindo',
+    confirmBtn: 'Entrar',
+    nameTitle: 'Como devo me referir a você?',
+    namePlaceholder: 'Seu nome',
+    pronounNeutral: 'Linguagem neutra',
+    pronounThey: 'They / them',
+    pronounHe: 'Ele / dele',
+    pronounShe: 'Ela / dela',
+    startTalking: 'Começar',
+    send: 'Enviar',
+    typing: 'digitando…',
+    notesTitle: 'Anotações',
+    notesEmpty: '(aguardando conversa…)',
+    q1: 'Você está aqui principalmente por:',
+    q1_work: 'Incerteza no trabalho',
+    q1_finance: 'Estresse financeiro',
+    q1_future: 'Pensando no meu futuro',
+    q2_work: 'Como está sua situação profissional agora?',
+    q2_work_opts: [
+      'Posso perder meu emprego',
+      'Já perdi meu emprego',
+      'Estou empregado, mas travado',
+      'Trabalho com ansiedade',
+    ],
+    q2_finance: 'Como está sua situação financeira?',
+    q2_finance_opts: [
+      'Vivendo mês a mês',
+      'Atrasando contas',
+      'Estável, mas preocupado',
+      'Renda incerta',
+    ],
+    q2_future: 'O quão claro está seu caminho agora?',
+    q2_future_opts: [
+      'Nada claro',
+      'Pouco claro',
+      'Tenho ideias, mas sem plano',
+      'Relativamente claro',
+    ],
+    q3: 'O que mais te preocupa agora?',
+    chatPlaceholder: 'Conte o que está te preocupando…',
+    grounding: 'Estou aqui. Respire. Você não está sozinho.',
+    intro_work: 'Certo, {name}. Vamos falar sobre o trabalho.',
+    intro_finance: 'Certo, {name}. Vamos falar sobre as finanças.',
+    intro_future: 'Certo, {name}. Vamos clarear o futuro.',
+  },
+
   es: {
     listening: 'Agente AI · Escuchando',
     back: 'Volver al inicio',
     guest: 'Modo invitado',
     signin: 'Iniciar sesión',
-    signout: 'Salir',
+    signout: 'Cerrar sesión',
     confirmTitle: 'Bienvenido',
     confirmBtn: 'Entrar',
-    nameTitle: '¿Cómo debo dirigirme a ti?',
+    nameTitle: '¿Cómo debo llamarte?',
     namePlaceholder: 'Tu nombre',
     pronounNeutral: 'Lenguaje neutral',
     pronounThey: 'They / them',
-    pronounHe: 'He / him',
-    pronounShe: 'She / her',
-    startTalking: 'Empezar',
+    pronounHe: 'Él / lo',
+    pronounShe: 'Ella / la',
+    startTalking: 'Comenzar',
     send: 'Enviar',
+    typing: 'escribiendo…',
+    notesTitle: 'Notas',
+    notesEmpty: '(esperando conversación…)',
     q1: '¿Estás aquí principalmente por:',
     q1_work: 'Incertidumbre laboral',
     q1_finance: 'Estrés financiero',
     q1_future: 'Pensando en mi futuro',
-    q2_work: '¿Cómo describirías tu situación laboral ahora?',
+    q2_work: '¿Cómo describirías tu situación laboral?',
     q2_work_opts: [
       'Puedo perder mi trabajo',
       'Ya perdí mi trabajo',
-      'Estoy empleado pero atrapado',
+      'Empleado pero estancado',
       'Trabajo con ansiedad',
     ],
-    q2_finance: '¿Cómo describirías tu situación financiera?',
+    q2_finance: '¿Cómo está tu situación financiera?',
     q2_finance_opts: [
-      'Vivo al día',
-      'Estoy atrasado en pagos',
+      'Viviendo al día',
+      'Pagos atrasados',
       'Estable pero preocupado',
       'Ingresos inciertos',
     ],
-    q2_future: '¿Qué tan claro ves tu camino ahora?',
+    q2_future: '¿Qué tan claro ves tu camino?',
     q2_future_opts: [
       'Nada claro',
-      'Poco claro',
-      'Tengo ideas pero no plan',
+      'Algo confuso',
+      'Ideas sin plan',
       'Bastante claro',
     ],
-    q3: '¿Qué es lo que más te preocupa ahora?',
+    q3: '¿Qué es lo que más te preocupa?',
     chatPlaceholder: 'Cuéntame qué te preocupa…',
     grounding: 'Estoy aquí. Respira. No estás solo.',
+    intro_work: 'Bien, {name}. Hablemos del trabajo.',
+    intro_finance: 'Bien, {name}. Hablemos de las finanzas.',
+    intro_future: 'Bien, {name}. Aclaremos tu camino.',
+  },
+
+  fr: {
+    listening: 'Agent AI · À l’écoute',
+    back: 'Retour au début',
+    guest: 'Mode invité',
+    signin: 'Connexion',
+    signout: 'Déconnexion',
+    confirmTitle: 'Bienvenue',
+    confirmBtn: 'Entrer',
+    nameTitle: 'Comment dois-je m’adresser à vous ?',
+    namePlaceholder: 'Votre nom',
+    pronounNeutral: 'Langage neutre',
+    pronounThey: 'They / them',
+    pronounHe: 'Il / lui',
+    pronounShe: 'Elle / elle',
+    startTalking: 'Commencer',
+    send: 'Envoyer',
+    typing: 'écrit…',
+    notesTitle: 'Notes',
+    notesEmpty: '(en attente de la conversation…)',
+    q1: 'Êtes-vous ici principalement pour :',
+    q1_work: 'Incertitude professionnelle',
+    q1_finance: 'Stress financier',
+    q1_future: 'Réflexion sur l’avenir',
+    q2_work: 'Quelle est votre situation professionnelle actuelle ?',
+    q2_work_opts: [
+      'Je risque de perdre mon emploi',
+      "J'ai déjà perdu mon emploi",
+      'Employé mais bloqué',
+      'Je travaille avec anxiété',
+    ],
+    q2_finance: 'Comment est votre situation financière ?',
+    q2_finance_opts: [
+      'Je vis au jour le jour',
+      'Paiements manqués',
+      'Stable mais inquiet',
+      'Revenus incertains',
+    ],
+    q2_future: 'Votre direction vous semble-t-elle claire ?',
+    q2_future_opts: [
+      'Pas du tout claire',
+      'Plutôt floue',
+      'Des idées sans plan',
+      'Assez claire',
+    ],
+    q3: 'Qu’est-ce qui vous inquiète le plus ?',
+    chatPlaceholder: 'Dites-moi ce qui vous préoccupe…',
+    grounding: 'Je suis là. Respirez. Vous n’êtes pas seul.',
+    intro_work: 'D’accord {name}. Parlons du travail.',
+    intro_finance: 'D’accord {name}. Parlons des finances.',
+    intro_future: 'D’accord {name}. Clarifions votre direction.',
   },
 };
 
@@ -346,9 +499,15 @@ export default function DashboardClientNotes() {
       const data = await res.json();
 
       if (data?.reply) {
-        setMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
-        addNote(data.reply);
-      }
+  setMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
+}
+
+if (data?.note) {
+  setNotes((prev) =>
+    prev.includes(data.note) ? prev : [...prev, data.note]
+  );
+}
+
     } catch {
       const fallback = "I'm here with you. Something went wrong on my side — can you try again?";
       setMessages((prev) => [...prev, { role: 'assistant', text: fallback }]);
@@ -383,20 +542,46 @@ export default function DashboardClientNotes() {
           <div style={{ ...aiOrb, ...pulse }} />
         </div>
 
-        <div style={topBar}>
-          <button onClick={() => router.push(`/?lang=${lang}`)} style={linkBtn}>
-            {T.back}
-          </button>
-          {userEmail ? (
-            <button onClick={handleSignOut} style={linkBtn}>
-              {T.signout}
-            </button>
-          ) : (
-            <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={linkBtn}>
-              {T.signin}
-            </button>
-          )}
-        </div>
+       <div style={notesAuthBar}>
+  {/* Language switch */}
+  <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
+    {(['en', 'pt', 'es', 'fr'] as Lang[]).map(l => (
+      <button
+        key={l}
+        onClick={() => router.push(`/dashboard?lang=${l}`)}
+        style={{
+          padding: '4px 8px',
+          borderRadius: 6,
+          fontSize: 12,
+          fontWeight: 600,
+          border: '1px solid rgba(122,162,255,0.4)',
+          background: l === lang ? '#7aa2ff' : 'transparent',
+          color: l === lang ? '#000' : '#7aa2ff',
+          cursor: 'pointer',
+        }}
+      >
+        {l.toUpperCase()}
+      </button>
+    ))}
+  </div>
+
+  {/* Back */}
+  <button onClick={() => router.push(`/?lang=${lang}`)} style={linkBtn}>
+    {T.back}
+  </button>
+
+  {/* Auth */}
+  {userEmail ? (
+    <button onClick={handleSignOut} style={signOutBtn}>
+      {T.signout}
+    </button>
+  ) : (
+    <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
+      {T.signin}
+    </button>
+  )}
+</div>
+
 
         {phase !== 'confirming' && (
           <div style={label}>
@@ -521,13 +706,13 @@ export default function DashboardClientNotes() {
                 <button
                   style={primaryBtn}
                   onClick={() => {
-                    const intro = `Alright ${name}. ${
-                      reason === 'work'
-                        ? "Let's talk about what's happening with work."
-                        : reason === 'finance'
-                        ? "Let's unpack the financial stress together."
-                        : "Let's get clarity on your direction."
-                    }`;
+                    const intro =
+  reason === 'work'
+    ? T.intro_work.replace('{name}', name)
+    : reason === 'finance'
+    ? T.intro_finance.replace('{name}', name)
+    : T.intro_future.replace('{name}', name);
+
                     setMessages([{ role: 'assistant', text: intro }]);
                     addNote(intro);
                     setPhase('chat');
@@ -595,18 +780,18 @@ export default function DashboardClientNotes() {
             zIndex: 5,
           }}
         >
-          <strong>Working Notes</strong>
-          <div style={{ marginTop: 8, fontSize: 13, opacity: 0.9 }}>
-            {notes.length === 0 ? (
-              <span style={{ opacity: 0.7 }}>(waiting for conversation…)</span>
-            ) : (
-              notes.map((n, i) => (
-                <div key={i} style={{ marginBottom: 6 }}>
-                  • {n}
-                </div>
-              ))
-            )}
-          </div>
+          <strong>{T.notesTitle}</strong>
+
+{notes.length === 0 ? (
+  <span style={{ opacity: 0.7 }}>{T.notesEmpty}</span>
+) : (
+  notes.map((n, i) => (
+    <div key={i} style={{ marginBottom: 6 }}>
+      • {n}
+    </div>
+  ))
+)}
+
         </div>
 
         <style jsx global>{`
@@ -649,6 +834,7 @@ export default function DashboardClientNotes() {
 }
 
 /* ================= STYLES ================= */
+
 const page: React.CSSProperties = {
   height: '100vh',
   position: 'relative',
@@ -688,15 +874,6 @@ const aiOrb = {
   boxShadow: '0 0 80px rgba(120,160,255,0.45)',
 };
 
-const topBar: React.CSSProperties = {
-  position: 'absolute',
-  top: 16,
-  right: 20,
-  zIndex: 3,
-  display: 'flex',
-  gap: 12,
-};
-
 const label: React.CSSProperties = {
   position: 'absolute',
   top: 28,
@@ -710,6 +887,36 @@ const linkBtn = {
   border: 'none',
   color: '#7aa2ff',
   cursor: 'pointer',
+};
+
+/* === AUTH BUTTONS (ABOVE WORKING NOTES) === */
+const notesAuthBar: React.CSSProperties = {
+  position: 'fixed',
+  left: '38%',
+  top: 80,
+  display: 'flex',
+  gap: 12,
+  zIndex: 6,
+};
+
+const signInBtn = {
+  padding: '6px 12px',
+  borderRadius: 8,
+  background: '#ffffff',
+  color: '#000',
+  border: 'none',
+  cursor: 'pointer',
+  fontWeight: 600,
+};
+
+const signOutBtn = {
+  padding: '6px 12px',
+  borderRadius: 8,
+  background: '#dc2626',
+  color: '#000',
+  border: 'none',
+  cursor: 'pointer',
+  fontWeight: 600,
 };
 
 const confirmBox: React.CSSProperties = {

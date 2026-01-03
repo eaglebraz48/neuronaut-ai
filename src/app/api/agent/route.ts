@@ -24,34 +24,45 @@ const BLOCKED_PATTERNS = [
 const REDIRECT_REPLY = `
 I can't help with medical, mental health crisis, legal, or harm-related topics.
 
-For career and work exploration, I can discuss:
-- General job types and industries
-- Transferable skills
-- High-level career directions
-
-What aspect of work or career direction would you like to explore?
+For career and work exploration, I can discuss general directions.
+What would you like to explore?
 `;
 
 /* ================= SYSTEM PROMPT ================= */
 const SYSTEM_PROMPT = `
 You are NEURONAUT — a career clarity assistant.
 
-FORMAT RULES:
-- Use **bold** for key concepts
-- Use bullet points (-) for lists
-- Keep answers structured and readable
+CONVERSATION STYLE:
+- Short replies (1–3 sentences)
+- One idea only
+- Human, calm, conversational
+- No explanations unless asked
+- No lists or bullets
+
+IMPORTANT:
+After each reply, internally extract ONE short factual insight
+that represents the core concern or direction.
+This will be used as a working note.
+Do NOT include the note in the reply text.
 
 SCOPE:
-- Career paths and transitions
-- Job types and industries
-- Skill assessment and work anxiety
-- Practical, high-level guidance
+- Career uncertainty
+- Work transitions
+- Skill direction
+`;
 
-AVOID:
-- Medical or legal advice
-- Crisis counseling
-- Investment or stock advice
-- Making decisions for the user
+/* ================= NOTE PROMPT ================= */
+const NOTE_PROMPT = `
+From the conversation so far, extract ONE short working note.
+Rules:
+- 6–12 words
+- Neutral, factual
+- No advice
+- No emotion
+- No punctuation at the end
+
+Example:
+"Fear of job loss due to AI automation"
 `;
 
 /* ================= HELPERS ================= */
@@ -67,7 +78,7 @@ export async function POST(req: Request) {
 
     if (!Array.isArray(messages)) {
       return NextResponse.json(
-        { reply: "Tell me what's on your mind about work or career direction." },
+        { reply: "Tell me what's on your mind about work." },
         { status: 200 }
       );
     }
@@ -80,7 +91,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const response = await openai.chat.completions.create({
+    // Main conversational reply
+    const chatResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -91,9 +103,26 @@ export async function POST(req: Request) {
       ],
     });
 
-    const reply = response.choices[0]?.message?.content ?? '';
+    const reply =
+      chatResponse.choices[0]?.message?.content?.trim() ?? '';
 
-    return NextResponse.json({ reply }, { status: 200 });
+    // Generate note separately
+    const noteResponse = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        ...messages.map((m: any) => ({
+          role: m.role,
+          content: m.text,
+        })),
+        { role: 'assistant', content: reply },
+        { role: 'system', content: NOTE_PROMPT },
+      ],
+    });
+
+    const note =
+      noteResponse.choices[0]?.message?.content?.trim() ?? null;
+
+    return NextResponse.json({ reply, note }, { status: 200 });
   } catch {
     return NextResponse.json(
       { reply: "Something went wrong. Please try again." },
