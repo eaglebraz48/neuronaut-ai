@@ -2,15 +2,14 @@ import "./globals.css";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { cookies } from "next/headers";
-
 import HashAuthBridge from "@/components/HashAuthBridge";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const fetchCache = "force-no-store";
 
-type Lang = "en" | "es";
-const LANGS: readonly Lang[] = ["en", "es"] as const;
+type Lang = "en" | "es" | "pt" | "fr";
+const LANGS: readonly Lang[] = ["en", "es", "pt", "fr"] as const;
 
 async function getLangFromCookie(): Promise<Lang> {
   try {
@@ -34,7 +33,7 @@ export default async function RootLayout({
   children: ReactNode;
 }) {
   const lang = await getLangFromCookie();
-
+  
   return (
     <html lang={lang} suppressHydrationWarning>
       <head>
@@ -43,7 +42,6 @@ export default async function RootLayout({
         <meta name="google" content="notranslate" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-
       <body
         style={{
           backgroundColor: "#0a0f1c",
@@ -53,7 +51,6 @@ export default async function RootLayout({
       >
         {/* MUST run before any page logic */}
         <HashAuthBridge />
-
         <main>
           <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
             {children}

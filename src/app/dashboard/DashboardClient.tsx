@@ -286,6 +286,10 @@ export default function DashboardClientNotes() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
+const [notesOpen, setNotesOpen] = useState(
+  typeof window !== 'undefined' ? window.innerWidth > 768 : true
+);
+
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
@@ -603,7 +607,7 @@ if (data?.note) {
 
         {phase === 'profile' && (
           <div style={questionBox}>
-            <div style={question}>{T.nameTitle}</div>
+           <div style={question} className="question-text-mobile">{T.nameTitle}</div>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -657,7 +661,7 @@ if (data?.note) {
           <div style={questionBox}>
             {step === 1 && (
               <>
-                <div style={question}>{T.q1}</div>
+               <div style={question} className="question-text-mobile">{T.q1}</div>
                 <button
                   style={optBtn}
                   onClick={() => {
@@ -690,7 +694,7 @@ if (data?.note) {
 
             {step === 2 && reason && (
               <>
-                <div style={question}>{T[`q2_${reason}` as keyof typeof T]}</div>
+                <div style={question} className="question-text-mobile">{T[`q2_${reason}` as keyof typeof T]}</div>
                 {(T[`q2_${reason}_opts` as keyof typeof T] as string[]).map((o) => (
                   <button key={o} style={optBtn} onClick={() => setStep(3)}>
                     {o}
@@ -701,8 +705,8 @@ if (data?.note) {
 
             {step === 3 && (
               <>
-                <div style={{ color: '#7aa2ff', marginBottom: 12 }}>{T.grounding}</div>
-                <div style={question}>{T.q3}</div>
+                <div style={{ color: '#1E2A5A', marginBottom: 12, fontWeight: 600 }}>{T.grounding}</div>
+                <div style={question} className="question-text-mobile">{T.q3}</div>
                 <button
                   style={primaryBtn}
                   onClick={() => {
@@ -729,10 +733,14 @@ if (data?.note) {
           <div style={chatWrapper}>
             <div style={chatMessages}>
               {messages.map((m, i) => (
-                <div key={i} style={m.role === 'assistant' ? aiMessage : userMessage}>
-                  {m.text}
-                </div>
-              ))}
+  <div 
+    key={i} 
+    style={m.role === 'assistant' ? aiMessage : userMessage}
+    className={m.role === 'assistant' ? 'ai-message-mobile' : 'user-message-mobile'}
+  >
+    {m.text}
+  </div>
+))}
               {isLoading && (
                 <div style={aiMessage}>
                   <em>typing...</em>
@@ -742,14 +750,15 @@ if (data?.note) {
 
             <div style={chatBar}>
               <div style={{ display: 'flex', gap: 12 }}>
-                <input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder={T.chatPlaceholder}
-                  style={chatInput}
-                  disabled={isLoading}
-                />
+              <input
+  value={inputValue}
+  onChange={(e) => setInputValue(e.target.value)}
+  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+  placeholder={T.chatPlaceholder}
+  style={chatInput}
+  className="chat-input-mobile"
+  disabled={isLoading}
+/>
                 <button
                   onClick={handleSend}
                   disabled={isLoading || !inputValue.trim()}
@@ -765,69 +774,118 @@ if (data?.note) {
           </div>
         )}
 
-        <div
-          style={{
-            position: 'fixed',
-            left: '38%',
-            top: 120,
-            width: 260,
-            minHeight: 120,
-            borderRadius: 16,
-            background: 'rgba(122,162,255,0.08)',
-            border: '1px dashed rgba(122,162,255,0.4)',
-            color: '#7aa2ff',
-            padding: 16,
-            zIndex: 5,
-          }}
-        >
-          <strong>{T.notesTitle}</strong>
+       <div
+  style={{
+    position: 'fixed',
+    left: '38%',
+    top: 120,
+    width: 280,
+    borderRadius: 18,
+    background: '#F3F4FF',
+    border: '1px solid #D6D9FF',
+    color: '#2B2E5F',
+    padding: 16,
+    boxShadow: '0 20px 60px rgba(120,130,255,0.35)',
+    zIndex: 5,
+  }}
+>
+  {/* HEADER */}
+<div
+  onClick={() => setNotesOpen(v => !v)}
+  style={{
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    cursor: 'pointer',
+    userSelect: 'none',
+  }}
+>
+  <strong>{T.notesTitle}</strong>
+  <span
+    style={{
+      fontSize: 16,
+      opacity: 0.7,
+      transform: notesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+      transition: 'transform 0.2s ease',
+    }}
+  >
+    ⌄
+  </span>
+</div>
 
-{notes.length === 0 ? (
-  <span style={{ opacity: 0.7 }}>{T.notesEmpty}</span>
-) : (
-  notes.map((n, i) => (
-    <div key={i} style={{ marginBottom: 6 }}>
-      • {n}
-    </div>
-  ))
-)}
 
-        </div>
+  {/* BODY */}
+  {notesOpen && (
+    <>
+      {notes.length === 0 ? (
+        <span style={{ color: '#141a33', opacity: 0.9 }}>
+          {T.notesEmpty}
+        </span>
+      ) : (
+        notes.map((n, i) => (
+          <div key={i} style={{ marginBottom: 6 }}>
+            • {n}
+          </div>
+        ))
+      )}
+    </>
+  )}
+</div>
+
 
         <style jsx global>{`
-          @media (min-width: 1024px) {
-            .ghost-symbol {
-              right: 18% !important;
-              top: 18% !important;
-            }
-          }
+  @media (min-width: 1024px) {
+    .ghost-symbol {
+      right: 18% !important;
+      top: 18% !important;
+    }
+  }
 
-          @media (max-width: 768px) {
-            .ghost-symbol {
-              right: 50% !important;
-              top: 58% !important;
-              transform: translate(50%, -50%) !important;
-              width: 420px;
-              height: 420px;
-              opacity: 0.18;
-            }
-          }
+  @media (max-width: 768px) {
+    .ghost-symbol {
+      right: 50% !important;
+      top: 58% !important;
+      transform: translate(50%, -50%) !important;
+      width: 420px;
+      height: 420px;
+      opacity: 0.18;
+    }
+    
+    /* ADD THESE NEW RULES FOR TEXT READABILITY */
+    .ai-message-mobile {
+      font-size: 16px !important;
+      line-height: 1.6 !important;
+    }
+    
+    .user-message-mobile {
+      font-size: 16px !important;
+      line-height: 1.6 !important;
+    }
+    
+    .chat-input-mobile {
+      font-size: 16px !important;
+    }
+    
+    .question-text-mobile {
+      font-size: 16px !important;
+    }
+  }
 
-          @keyframes pulse {
-            0% {
-              transform: scale(1);
-              box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
-            }
-            50% {
-              transform: scale(1.06);
-              box-shadow: 0 0 95px rgba(120, 160, 255, 0.65);
-            }
-            100% {
-              transform: scale(1);
-              box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
-            }
-          }
-        `}</style>
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
+    }
+    50% {
+      transform: scale(1.06);
+      box-shadow: 0 0 95px rgba(120, 160, 255, 0.65);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
+    }
+  }
+`}</style>
       </div>
     </>
   );
@@ -930,24 +988,35 @@ const confirmBox: React.CSSProperties = {
 
 const questionBox: React.CSSProperties = {
   position: 'absolute',
-  bottom: 160,
+  bottom: 80, // desce a caixa
   left: 48,
   maxWidth: 520,
   zIndex: 3,
+
+  background: '#EEF3FF', // mesmo tom do Working Notes
+  border: '1px solid rgba(92,124,250,0.45)',
+  borderRadius: 18,
+  padding: 20,
+  boxShadow: '0 14px 40px rgba(92,124,250,0.25)',
+  color: '#1E2A5A', // texto mais vivo
 };
 
 const question = {
   marginBottom: 14,
   fontSize: 15,
+  color: '#1E2A5A',  // NEW - dark blue, matches questionBox text
+  fontWeight: 600,   // ADD - makes it bold
 };
 
 const nameInput = {
   width: 340,
   padding: '12px 14px',
   borderRadius: 12,
-  background: '#111827',
-  color: '#fff',
-  border: '1px solid rgba(255,255,255,0.12)',
+background: '#11172e',
+color: '#e5ecff',
+border: '1px solid rgba(122,162,255,0.3)',
+
+
 };
 
 const primaryBtn = {
@@ -965,9 +1034,10 @@ const optBtn: React.CSSProperties = {
   marginBottom: 10,
   padding: '10px 14px',
   borderRadius: 10,
-  border: '1px solid rgba(122,162,255,0.4)',
-  background: 'transparent',
-  color: '#fff',
+ background: '#141a33',
+color: '#e5ecff',
+border: '1px solid rgba(122,162,255,0.35)',
+boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
   width: 340,
   textAlign: 'left',
   cursor: 'pointer',
@@ -975,7 +1045,10 @@ const optBtn: React.CSSProperties = {
 
 const optBtnActive = {
   ...optBtn,
-  background: 'rgba(122,162,255,0.15)',
+  background: '#7aa2ff',  // NEW - bright blue
+  color: '#000',          // ADD - dark text
+  fontWeight: 700,        // ADD - bold
+  border: '2px solid #5c7cfa',  // ADD - stronger border
 };
 
 const chatWrapper: React.CSSProperties = {
@@ -992,13 +1065,19 @@ const chatMessages: React.CSSProperties = {
   overflowY: 'auto',
 };
 
-const aiMessage = {
-  color: '#7aa2ff',
+const aiMessage: React.CSSProperties = {
   marginBottom: 12,
-  padding: '10px 14px',
-  borderRadius: 12,
+  padding: '12px 16px',
+  borderRadius: 14,
   maxWidth: 520,
+
+  background: 'linear-gradient(135deg, #E6EBFF 0%, #F2F5FF 100%)',
+  color: '#1E2A5A',
+
+  border: '1px solid rgba(122,162,255,0.45)',
+  boxShadow: '0 12px 36px rgba(122,162,255,0.35)',
 };
+
 
 const userMessage = {
   marginBottom: 8,
@@ -1014,14 +1093,20 @@ const chatBar = {
   background: 'rgba(6,10,20,0.95)',
 };
 
-const chatInput = {
+const chatInput: React.CSSProperties = {
   flex: 1,
   padding: 16,
-  borderRadius: 14,
-  background: '#111827',
-  color: '#fff',
-  border: 'none',
+  borderRadius: 16,
+
+  background: '#0F1533',
+  color: '#E5ECFF',
+
+  border: '1px solid rgba(122,162,255,0.35)',
+  boxShadow: '0 0 0 2px rgba(122,162,255,0.45)',
+
+  outline: 'none',
 };
+
 
 const pulse = {
   animation: 'pulse 3.2s ease-in-out infinite',
