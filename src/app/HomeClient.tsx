@@ -3,29 +3,31 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-
 type Lang = 'en' | 'pt' | 'es' | 'fr';
 
-const COPY: Record<Lang, { tagline: string; guest: string; signin: string }> = {
-  en: {
-    tagline: 'When life feels uncertain, you don’t have to think alone.',
-    guest: 'Continue as guest',
-    signin: 'Sign in',
-  },
+const SUPPORT_COPY: Record<
+  Lang,
+  { main: string; signin: string; guest: string }
+> = {
   pt: {
-    tagline: 'Quando o futuro parece incerto, você não está sozinho.',
-    guest: 'Continuar como convidado',
+    main: 'Para tudo existe um caminho. Estamos com você.',
     signin: 'Entrar',
+    guest: 'Continuar como convidado',
+  },
+  en: {
+    main: "You don’t have to go through this alone",
+    signin: 'Sign in',
+    guest: 'Continue as guest',
   },
   es: {
-    tagline: 'Cuando el futuro parece incierto, no tienes que pensar solo.',
-    guest: 'Entrar como invitado',
+    main: 'Para todo hay un camino. Estamos contigo.',
     signin: 'Iniciar sesión',
+    guest: 'Entrar como invitado',
   },
   fr: {
-    tagline: 'Quand l’avenir semble incertain, vous n’êtes pas seul.',
-    guest: 'Continuer en invité',
+    main: 'Il existe toujours une voie. Nous sommes avec vous.',
     signin: 'Connexion',
+    guest: 'Continuer en invité',
   },
 };
 
@@ -33,20 +35,18 @@ export default function HomeClient() {
   const router = useRouter();
   const sp = useSearchParams();
   const lang = (sp.get('lang') as Lang) || 'en';
-  const T = COPY[lang];
+  const T = SUPPORT_COPY[lang];
 
   const go = (path: string) => router.push(`${path}?lang=${lang}`);
 
   return (
     <div style={page}>
-
-
       <div style={bg} />
       <div style={overlay} />
 
       <div style={centerWrap}>
         <div style={card}>
-          {/* LANGUAGES */}
+          {/* LANG */}
           <div style={langInline}>
             {(['en', 'pt', 'es', 'fr'] as Lang[]).map((l) => (
               <button
@@ -63,14 +63,22 @@ export default function HomeClient() {
             ))}
           </div>
 
-          {/* BUTTONS */}
+          {/* SIGN IN */}
           <button style={primaryBtn} onClick={() => go('/sign-in')}>
             {T.signin}
           </button>
 
-          {/* TAGLINE */}
-          <div style={tagline}>{T.tagline}</div>
+          {/* HERO */}
+          <div style={heroWrap}>
+            <img
+              src="/neuronaut-woman-smiling.png"
+              alt="Support"
+              style={heroImg}
+            />
+            <div style={heroText}>{T.main}</div>
+          </div>
 
+          {/* GUEST */}
           <button style={secondaryBtn} onClick={() => go('/dashboard?guest=1')}>
             {T.guest}
           </button>
@@ -85,6 +93,11 @@ export default function HomeClient() {
           50% { transform: scale(1.04); opacity: 1; }
           100% { transform: scale(1); opacity: 0.9; }
         }
+
+        @keyframes fadeInHero {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
     </div>
   );
@@ -93,7 +106,7 @@ export default function HomeClient() {
 /* ================= STYLES ================= */
 
 const page: React.CSSProperties = {
-  height: '100vh',
+  minHeight: '100vh',
   width: '100%',
   position: 'relative',
   overflow: 'hidden',
@@ -114,28 +127,22 @@ const overlay: React.CSSProperties = {
   position: 'absolute',
   inset: 0,
   background:
-    'radial-gradient(circle at center, rgba(80,110,255,0.25), rgba(6,11,24,0.92) 70%)',
+    'radial-gradient(circle at center, rgba(20,40,120,0.35), rgba(4,6,15,0.95) 72%)',
 };
 
 const centerWrap: React.CSSProperties = {
   position: 'relative',
-  zIndex: 3,
-  minHeight: '100%',
+  zIndex: 5,
+  minHeight: '100vh',
   display: 'flex',
-  justifyContent: 'flex-start',
-  alignItems: 'flex-start',
-  paddingTop: '28vh',
-  paddingLeft: 20,
-  paddingRight: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+  padding: '0 20px',
 };
 
 const card: React.CSSProperties = {
   width: '100%',
   maxWidth: 360,
-  margin: '0 auto',
-  padding: 0,
-  background: 'transparent',
-  boxShadow: 'none',
   textAlign: 'center',
 };
 
@@ -143,7 +150,7 @@ const langInline: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'center',
   gap: 18,
-  marginBottom: 26,
+  marginBottom: 22,
 };
 
 const langBtn: React.CSSProperties = {
@@ -164,9 +171,28 @@ const primaryBtn: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 700,
   cursor: 'pointer',
-  marginBottom: 14,
-  boxShadow:
-    '0 20px 60px rgba(122,162,255,0.55), 0 0 0 1px rgba(255,255,255,0.15) inset',
+  marginBottom: 16,
+};
+
+const heroWrap: React.CSSProperties = {
+  marginBottom: 16,
+  animation: 'fadeInHero 1.2s ease forwards',
+  opacity: 0,
+};
+
+const heroImg: React.CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: '50%',
+  objectFit: 'cover',
+  boxShadow: '0 18px 50px rgba(0,0,0,0.55)',
+  marginBottom: 10,
+};
+
+const heroText: React.CSSProperties = {
+  fontSize: 15,
+  fontWeight: 600,
+  lineHeight: 1.5,
 };
 
 const secondaryBtn: React.CSSProperties = {
@@ -174,21 +200,11 @@ const secondaryBtn: React.CSSProperties = {
   padding: '15px 26px',
   borderRadius: 22,
   border: '1px solid rgba(130,160,255,0.45)',
-  background: 'rgba(10,15,28,0.55)',
+  background: 'rgba(10,15,28,0.6)',
   color: '#c9d4ff',
   fontSize: 15,
   fontWeight: 600,
   cursor: 'pointer',
-  marginTop: 22,
-};
-
-const tagline: React.CSSProperties = {
-  marginTop: 12,
-  fontSize: 15,
-  lineHeight: 1.6,
-  opacity: 0.9,
-  letterSpacing: 0.2,
-  textShadow: '0 2px 12px rgba(0,0,0,0.45)',
 };
 
 const footer: React.CSSProperties = {
