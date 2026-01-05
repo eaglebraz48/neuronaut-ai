@@ -922,15 +922,26 @@ const aiOrbWrap: React.CSSProperties = {
   zIndex: 2,
 };
 
+// Replace your aiOrb style with this (human face only)
+
 const aiOrb = {
-  width: 180,
-  height: 180,
+  width: 200,
+  height: 200,
   borderRadius: '50%',
-  backgroundImage: "url('/ai-brain-face.png')",
+  backgroundImage: "url('/ai-brain-face.png')", // <-- put the final face image here
   backgroundPosition: 'center',
   backgroundSize: 'cover',
-  boxShadow: '0 0 80px rgba(120,160,255,0.45)',
+  backgroundRepeat: 'no-repeat',
+
+  // soften + humanize
+  filter: 'brightness(1.05) contrast(0.98) saturate(0.95)',
+  boxShadow: `
+    0 0 40px rgba(120,140,255,0.25),
+    inset 0 0 0 1px rgba(255,255,255,0.06)
+  `,
 };
+
+
 
 const label: React.CSSProperties = {
   position: 'absolute',
