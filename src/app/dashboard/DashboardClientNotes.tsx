@@ -50,6 +50,8 @@ type CopySchema = {
   intro_work: string;
   intro_finance: string;
   intro_future: string;
+  calmNote: string;
+
 };
 
 /* ================= COPY ================= */
@@ -104,6 +106,8 @@ const COPY: Record<Lang, CopySchema> = {
     intro_work: "Alright {name}. Let's talk about what's happening with work.",
     intro_finance: "Alright {name}. Let's unpack the financial stress together.",
     intro_future: "Alright {name}. Let's get clarity on your direction.",
+    calmNote: 'Not here to fix your life. Here to help you see your next steps.',
+
   },
 
   pt: {
@@ -156,6 +160,8 @@ const COPY: Record<Lang, CopySchema> = {
     intro_work: 'Certo, {name}. Vamos falar sobre o trabalho.',
     intro_finance: 'Certo, {name}. Vamos falar sobre as finanças.',
     intro_future: 'Certo, {name}. Vamos clarear o futuro.',
+    calmNote: 'Não é para consertar sua vida. É para ajudar você a enxergar os próximos passos.',
+
   },
 
   es: {
@@ -208,59 +214,63 @@ const COPY: Record<Lang, CopySchema> = {
     intro_work: 'Bien, {name}. Hablemos del trabajo.',
     intro_finance: 'Bien, {name}. Hablemos de las finanzas.',
     intro_future: 'Bien, {name}. Aclaremos tu camino.',
+    calmNote: 'No está aquí para arreglar tu vida. Está aquí para ayudarte a ver tus próximos pasos.',
+
   },
 
   fr: {
-    listening: 'Agent AI · À l’écoute',
-    back: 'Retour au début',
-    guest: 'Mode invité',
-    signin: 'Connexion',
-    signout: 'Déconnexion',
-    confirmTitle: 'Bienvenue',
-    confirmBtn: 'Entrer',
-    nameTitle: 'Comment dois-je m’adresser à vous ?',
-    namePlaceholder: 'Votre nom',
-    pronounNeutral: 'Langage neutre',
-    pronounThey: 'They / them',
-    pronounHe: 'Il / lui',
-    pronounShe: 'Elle / elle',
-    startTalking: 'Commencer',
-    send: 'Envoyer',
-    typing: 'écrit…',
-    notesTitle: 'Notes',
-    notesEmpty: '(en attente de la conversation…)',
-    q1: 'Êtes-vous ici principalement pour :',
-    q1_work: 'Incertitude professionnelle',
-    q1_finance: 'Stress financier',
-    q1_future: 'Réflexion sur l’avenir',
-    q2_work: 'Quelle est votre situation professionnelle actuelle ?',
-    q2_work_opts: [
-      'Je risque de perdre mon emploi',
-      "J'ai déjà perdu mon emploi",
-      'Employé mais bloqué',
-      'Je travaille avec anxiété',
-    ],
-    q2_finance: 'Comment est votre situation financière ?',
-    q2_finance_opts: [
-      'Je vis au jour le jour',
-      'Paiements manqués',
-      'Stable mais inquiet',
-      'Revenus incertains',
-    ],
-    q2_future: 'Votre direction vous semble-t-elle claire ?',
-    q2_future_opts: [
-      'Pas du tout claire',
-      'Plutôt floue',
-      'Des idées sans plan',
-      'Assez claire',
-    ],
-    q3: 'Qu’est-ce qui vous inquiète le plus ?',
-    chatPlaceholder: 'Dites-moi ce qui vous préoccupe…',
-    grounding: 'Je suis là. Respirez. Vous n’êtes pas seul.',
-    intro_work: 'D’accord {name}. Parlons du travail.',
-    intro_finance: 'D’accord {name}. Parlons des finances.',
-    intro_future: 'D’accord {name}. Clarifions votre direction.',
-  },
+  listening: 'Agent AI · À l’écoute',
+  back: 'Retour au début',
+  guest: 'Mode invité',
+  signin: 'Connexion',
+  signout: 'Déconnexion',
+  confirmTitle: 'Bienvenue',
+  confirmBtn: 'Entrer',
+  nameTitle: 'Comment dois-je m’adresser à vous ?',
+  namePlaceholder: 'Votre nom',
+  pronounNeutral: 'Langage neutre',
+  pronounThey: 'They / them',
+  pronounHe: 'Il / lui',
+  pronounShe: 'Elle / elle',
+  startTalking: 'Commencer',
+  send: 'Envoyer',
+  typing: 'écrit…',
+  notesTitle: 'Notes',
+  notesEmpty: '(en attente de la conversation…)',
+  q1: 'Êtes-vous ici principalement pour :',
+  q1_work: 'Incertitude professionnelle',
+  q1_finance: 'Stress financier',
+  q1_future: 'Réflexion sur l’avenir',
+  q2_work: 'Quelle est votre situation professionnelle actuelle ?',
+  q2_work_opts: [
+    'Je risque de perdre mon emploi',
+    "J'ai déjà perdu mon emploi",
+    'Employé mais bloqué',
+    'Je travaille avec anxiété',
+  ],
+  q2_finance: 'Comment est votre situation financière ?',
+  q2_finance_opts: [
+    'Je vis au jour le jour',
+    'Paiements manqués',
+    'Stable mais inquiet',
+    'Revenus incertains',
+  ],
+  q2_future: 'Votre direction vous semble-t-elle claire ?',
+  q2_future_opts: [
+    'Pas du tout claire',
+    'Plutôt floue',
+    'Des idées sans plan',
+    'Assez claire',
+  ],
+  q3: 'Qu’est-ce qui vous inquiète le plus ?',
+  chatPlaceholder: 'Dites-moi ce qui vous préoccupe…',
+  grounding: 'Je suis là. Respirez. Vous n’êtes pas seul.',
+  intro_work: 'D’accord {name}. Parlons du travail.',
+  intro_finance: 'D’accord {name}. Parlons des finances.',
+  intro_future: 'D’accord {name}. Clarifions votre direction.',
+  calmNote: 'Pas ici pour réparer votre vie. Ici pour vous aider à voir les prochaines étapes.',
+},
+
 };
 
 const TERMS_VERSION = '2026-01-02';
@@ -292,6 +302,8 @@ const [notesOpen, setNotesOpen] = useState(
 
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+
+  /* funções, useEffect, handlers continuam */
 
   const addNote = (text: string) => {
     if (!text) return;
@@ -547,6 +559,17 @@ if (data?.note) {
         </div>
 
        <div style={notesAuthBar}>
+{/* CALM NOTE – texto flutuante */}
+{phase === 'guided' && (
+  <div className="calm-note" style={calmNote}>
+    {T.calmNote}
+  </div>
+)}
+
+
+
+
+
   {/* Language switch */}
   <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
     {(['en', 'pt', 'es', 'fr'] as Lang[]).map(l => (
@@ -850,7 +873,20 @@ if (data?.note) {
       height: 420px;
       opacity: 0.18;
     }
-    
+@media (max-width: 768px) {
+  .calm-note {
+    left: 8px !important;      /* ~1.5 dedos da borda */
+    top: 240px !important;    /* um pouco abaixo do orb */
+    max-width: 250px !important;
+
+    font-size: 15px !important;
+    line-height: 1.55 !important;
+    text-align: left !important;
+  }
+}
+
+
+
     /* ADD THESE NEW RULES FOR TEXT READABILITY */
     .ai-message-mobile {
       font-size: 16px !important;
@@ -928,7 +964,7 @@ const aiOrb = {
   width: 200,
   height: 200,
   borderRadius: '50%',
-  backgroundImage: "url('/ai-brain-face.png')", // <-- put the final face image here
+  backgroundImage: "url('/neuronaut.people.png')",
   backgroundPosition: 'center',
   backgroundSize: 'cover',
   backgroundRepeat: 'no-repeat',
@@ -940,7 +976,6 @@ const aiOrb = {
     inset 0 0 0 1px rgba(255,255,255,0.06)
   `,
 };
-
 
 
 
@@ -1124,3 +1159,24 @@ const chatInput: React.CSSProperties = {
 const pulse = {
   animation: 'pulse 3.2s ease-in-out infinite',
 };
+const calmNote: React.CSSProperties = {
+  position: 'absolute',
+
+  /* 👇 AQUI você ajusta a posição */
+  top: 180,      // sobe / desce
+  left: 10,     // vai pra esquerda / direita
+
+  maxWidth: 360,
+
+  color: '#8FA6FF',        // azul AI
+  fontSize: 18,            // tamanho no desktop
+  lineHeight: 1.55,
+  fontWeight: 500,
+
+  opacity: 0.9,
+  textShadow: '0 0 18px rgba(120,160,255,0.35)',
+
+  zIndex: 2,
+  pointerEvents: 'none',
+};
+
