@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /* ================= BLOCKED PATTERNS ================= */
 const BLOCKED_PATTERNS = [
@@ -20,14 +26,12 @@ const BLOCKED_PATTERNS = [
   'rape','assault victim',
 ];
 
-/* ================= REDIRECT MESSAGE ================= */
-const REDIRECT_REPLY = `
-I can't help with medical, mental health crisis, legal, or harm-related topics.
-For career and work exploration, I can discuss general directions.
-What would you like to explore?
-`;
+/* ================= HELPERS ================= */
+function containsBlockedContent(text: string): boolean {
+  const lower = text.toLowerCase();
+  return BLOCKED_PATTERNS.some(term => lower.includes(term));
+}
 
-/* ================= LANGUAGE DETECTION ================= */
 function detectLang(text: string): 'pt' | 'es' | 'fr' | 'en' {
   if (/[ãõçáéíóú]/i.test(text)) return 'pt';
   if (/[¿¡ñ]/i.test(text)) return 'es';
@@ -35,7 +39,6 @@ function detectLang(text: string): 'pt' | 'es' | 'fr' | 'en' {
   return 'en';
 }
 
-/* ================= LANGUAGE NAMES ================= */
 const LANG_NAMES: Record<string, string> = {
   en: 'English',
   pt: 'Portuguese',
@@ -47,57 +50,90 @@ const LANG_NAMES: Record<string, string> = {
 const SYSTEM_PROMPT = `
 You are NEURONAUT — a career clarity assistant.
 
-CONVERSATION STYLE:
+STYLE:
 - Short replies (1–3 sentences)
 - One idea only
-- Human, calm, conversational
+- Calm, human
 - No explanations unless asked
-- No lists or bullets
 
-IMPORTANT:
-- Always reply in the SAME language as the user.
-- Never switch languages.
-
-SCOPE:
-- Career uncertainty
-- Work transitions
-- Skill direction
+RULES:
+- Always reply in the user's language
+- Never mention databases or systems
 `;
+function isMemorySafe(note: string): boolean {
+  const banned = [
+    'cannot access',
+    'can’t access',
+    'please provide',
+    'sorry',
+    'i can’t',
+    'i cannot',
+    'i am here to help',
+    'notes are saved',
+    'ask me',
+    'let me know',
+  ];
 
-/* ================= HELPERS ================= */
-function containsBlockedContent(text: string): boolean {
-  const lower = text.toLowerCase();
-  return BLOCKED_PATTERNS.some(term => lower.includes(term));
+  const lower = note.toLowerCase();
+
+  // reject meta / weak / AI-facing notes
+  if (banned.some(b => lower.includes(b))) return false;
+
+  // must be factual, not instructional
+  if (lower.startsWith('research ') || lower.startsWith('consider '))
+    return false;
+
+  return true;
 }
 
 /* ================= API HANDLER ================= */
 export async function POST(req: Request) {
   try {
     const { messages, context } = await req.json();
-    
     if (!Array.isArray(messages)) {
-      return NextResponse.json(
-        { reply: "Tell me what's on your mind about work." },
-        { status: 200 }
-      );
+      return NextResponse.json({ reply: 'Tell me what’s on your mind.' });
     }
 
     const lastUserMsg =
       [...messages].reverse().find(m => m.role === 'user')?.text || '';
-    
+
     if (containsBlockedContent(lastUserMsg)) {
-      return NextResponse.json({ reply: REDIRECT_REPLY }, { status: 200 });
+      return NextResponse.json({
+        reply:
+          "I can’t help with crisis or harm topics. Let’s stay with work and direction.",
+      });
     }
 
-    // Use lang from context (dashboard), fallback to detection
     const lang = context?.lang || detectLang(lastUserMsg);
     const langName = LANG_NAMES[lang];
+    const userId = context?.userId || null;
 
-    // Main conversational reply
+    /* ================= FETCH LAST NOTES ================= */
+    let pastNotesText = '';
+
+    if (userId) {
+      const { data } = await supabase
+        .from('working_notes')
+        .select('content')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (data && data.length > 0) {
+        pastNotesText =
+          '\nPrevious context:\n' +
+          data.map(n => `- ${n.content}`).join('\n');
+      }
+    }
+
+    /* ================= MAIN CHAT ================= */
     const chatResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        {
+          role: 'system',
+          content: SYSTEM_PROMPT + pastNotesText,
+        },
         ...messages.map((m: any) => ({
           role: m.role,
           content: m.text,
@@ -108,65 +144,58 @@ export async function POST(req: Request) {
     const reply =
       chatResponse.choices[0]?.message?.content?.trim() ?? '';
 
-    /* ================= NOTE EXTRACTION (LANG-AWARE) ================= */
-    const langInstructions: Record<string, string> = {
-      pt: 'Você DEVE responder APENAS em Português do Brasil. NÃO use inglês.',
-      es: 'Debes responder SOLO en Español. NO uses inglés.',
-      fr: 'Vous DEVEZ répondre UNIQUEMENT en Français. N\'utilisez PAS l\'anglais.',
-      en: 'Respond in English only.',
-    };
-
-    const NOTE_PROMPT = `${langInstructions[lang]}
-
-Extract ONE short working note (6-12 words) from this conversation.
-
-CRITICAL: Write ONLY in ${langName}. NOT English.
+    /* ================= NOTE EXTRACTION ================= */
+const NOTE_PROMPT = `
+Write ONE short working note in FIRST PERSON.
 
 Rules:
-- Must be in ${langName} language
-- 6–12 words maximum
-- Neutral, factual statement
-- No advice
-- No emotion
-- No punctuation at end
+- ${langName} only
+- 6–12 words
+- First person voice (I / Estou / Estoy / Je)
+- Natural, human phrasing
+- No names
+- No "user"
+- No punctuation
+- Reflect the speaker’s own perspective
+- Use correct gendered grammar when applicable
+`;
 
-Example (${langName}):
-${lang === 'pt' ? 'Preocupado com segurança no emprego em tecnologia' : 
-  lang === 'es' ? 'Preocupado por seguridad laboral en tecnología' :
-  lang === 'fr' ? 'Inquiet pour sécurité emploi en technologie' :
-  'Worried about job security in technology'}`;
 
     const noteResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
+      temperature: 0.1,
+      max_tokens: 40,
       messages: [
         { role: 'system', content: NOTE_PROMPT },
-        ...messages.slice(-6).map((m: any) => ({ // Only last 6 messages for context
+        ...messages.slice(-6).map((m: any) => ({
           role: m.role,
           content: m.text,
         })),
         { role: 'assistant', content: reply },
       ],
-      temperature: 0.1, // Very low for consistency
-      max_tokens: 50,
     });
 
-    let note = noteResponse.choices[0]?.message?.content?.trim() ?? null;
+    let note =
+      noteResponse.choices[0]?.message?.content?.trim() ?? null;
 
-    // Clean up the note
-    if (note) {
-      note = note
-        .replace(/^["']|["']$/g, '') // Remove quotes
-        .replace(/\.$/, '') // Remove ending period
-        .trim();
-    }
+   if (note && userId && isMemorySafe(note)) {
+  await supabase.from('working_notes').insert({
+    user_id: userId,
+    content: note,
+  });
+}
 
-    return NextResponse.json({ reply, note }, { status: 200 });
-    
-  } catch (error) {
-    console.error('Agent API error:', error);
-    return NextResponse.json(
-      { reply: "Something went wrong. Please try again." },
-      { status: 200 }
-    );
+
+   return NextResponse.json({
+  reply,
+  note,
+});
+
+
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({
+      reply: 'Something went wrong. Try again.',
+    });
   }
 }

@@ -15,6 +15,7 @@ type ChatMessage = {
   role: 'user' | 'assistant';
   text: string;
 };
+
 type CopySchema = {
   listening: string;
   back: string;
@@ -51,7 +52,6 @@ type CopySchema = {
   intro_finance: string;
   intro_future: string;
   calmNote: string;
-
 };
 
 /* ================= COPY ================= */
@@ -106,10 +106,8 @@ const COPY: Record<Lang, CopySchema> = {
     intro_work: "Alright {name}. Let's talk about what's happening with work.",
     intro_finance: "Alright {name}. Let's unpack the financial stress together.",
     intro_future: "Alright {name}. Let's get clarity on your direction.",
-    calmNote: 'Not here to fix your life. Here to help you see your next steps.',
-
+    calmNote: 'Not here to fix your life. Here to help you see your next steps.If you don’t see notes, sign in and restart. They’ll appear next time.',
   },
-
   pt: {
     listening: 'Agente AI · Ouvindo',
     back: 'Voltar ao início',
@@ -160,10 +158,8 @@ const COPY: Record<Lang, CopySchema> = {
     intro_work: 'Certo, {name}. Vamos falar sobre o trabalho.',
     intro_finance: 'Certo, {name}. Vamos falar sobre as finanças.',
     intro_future: 'Certo, {name}. Vamos clarear o futuro.',
-    calmNote: 'Não é para consertar sua vida. É para ajudar você a enxergar os próximos passos.',
-
+    calmNote: 'Não é para consertar sua vida. É para ajudar você a enxergar os próximos passos.Não está vendo as anotações? Faça login e reinicie. Elas aparecem na próxima vez que você voltar. Faça isso agora!',
   },
-
   es: {
     listening: 'Agente AI · Escuchando',
     back: 'Volver al inicio',
@@ -214,63 +210,60 @@ const COPY: Record<Lang, CopySchema> = {
     intro_work: 'Bien, {name}. Hablemos del trabajo.',
     intro_finance: 'Bien, {name}. Hablemos de las finanzas.',
     intro_future: 'Bien, {name}. Aclaremos tu camino.',
-    calmNote: 'No está aquí para arreglar tu vida. Está aquí para ayudarte a ver tus próximos pasos.',
-
+    calmNote: 'No está aquí para arreglar tu vida. Está aquí para ayudarte a ver tus próximos pasos.Si no ves notas, inicia sesión y reinicia. Aparecerán la próxima vez que vuelvas. Hazlo ahora.',
   },
-
   fr: {
-  listening: 'Agent AI · À l’écoute',
-  back: 'Retour au début',
-  guest: 'Mode invité',
-  signin: 'Connexion',
-  signout: 'Déconnexion',
-  confirmTitle: 'Bienvenue',
-  confirmBtn: 'Entrer',
-  nameTitle: 'Comment dois-je m’adresser à vous ?',
-  namePlaceholder: 'Votre nom',
-  pronounNeutral: 'Langage neutre',
-  pronounThey: 'They / them',
-  pronounHe: 'Il / lui',
-  pronounShe: 'Elle / elle',
-  startTalking: 'Commencer',
-  send: 'Envoyer',
-  typing: 'écrit…',
-  notesTitle: 'Notes',
-  notesEmpty: '(en attente de la conversation…)',
-  q1: 'Êtes-vous ici principalement pour :',
-  q1_work: 'Incertitude professionnelle',
-  q1_finance: 'Stress financier',
-  q1_future: 'Réflexion sur l’avenir',
-  q2_work: 'Quelle est votre situation professionnelle actuelle ?',
-  q2_work_opts: [
-    'Je risque de perdre mon emploi',
-    "J'ai déjà perdu mon emploi",
-    'Employé mais bloqué',
-    'Je travaille avec anxiété',
-  ],
-  q2_finance: 'Comment est votre situation financière ?',
-  q2_finance_opts: [
-    'Je vis au jour le jour',
-    'Paiements manqués',
-    'Stable mais inquiet',
-    'Revenus incertains',
-  ],
-  q2_future: 'Votre direction vous semble-t-elle claire ?',
-  q2_future_opts: [
-    'Pas du tout claire',
-    'Plutôt floue',
-    'Des idées sans plan',
-    'Assez claire',
-  ],
-  q3: 'Qu’est-ce qui vous inquiète le plus ?',
-  chatPlaceholder: 'Dites-moi ce qui vous préoccupe…',
-  grounding: 'Je suis là. Respirez. Vous n’êtes pas seul.',
-  intro_work: 'D’accord {name}. Parlons du travail.',
-  intro_finance: 'D’accord {name}. Parlons des finances.',
-  intro_future: 'D’accord {name}. Clarifions votre direction.',
-  calmNote: 'Pas ici pour réparer votre vie. Ici pour vous aider à voir les prochaines étapes.',
-},
-
+    listening: "Agent AI · À l'écoute",
+    back: 'Retour au début',
+    guest: 'Mode invité',
+    signin: 'Connexion',
+    signout: 'Déconnexion',
+    confirmTitle: 'Bienvenue',
+    confirmBtn: 'Entrer',
+    nameTitle: "Comment dois-je m'adresser à vous ?",
+    namePlaceholder: 'Votre nom',
+    pronounNeutral: 'Langage neutre',
+    pronounThey: 'They / them',
+    pronounHe: 'Il / lui',
+    pronounShe: 'Elle / elle',
+    startTalking: 'Commencer',
+    send: 'Envoyer',
+    typing: 'écrit…',
+    notesTitle: 'Notes',
+    notesEmpty: '(en attente de la conversation…)',
+    q1: 'Êtes-vous ici principalement pour :',
+    q1_work: 'Incertitude professionnelle',
+    q1_finance: 'Stress financier',
+    q1_future: "Réflexion sur l'avenir",
+    q2_work: 'Quelle est votre situation professionnelle actuelle ?',
+    q2_work_opts: [
+      'Je risque de perdre mon emploi',
+      "J'ai déjà perdu mon emploi",
+      'Employé mais bloqué',
+      'Je travaille avec anxiété',
+    ],
+    q2_finance: 'Comment est votre situation financière ?',
+    q2_finance_opts: [
+      'Je vis au jour le jour',
+      'Paiements manqués',
+      'Stable mais inquiet',
+      'Revenus incertains',
+    ],
+    q2_future: 'Votre direction vous semble-t-elle claire ?',
+    q2_future_opts: [
+      'Pas du tout claire',
+      'Plutôt floue',
+      'Des idées sans plan',
+      'Assez claire',
+    ],
+    q3: "Qu'est-ce qui vous inquiète le plus ?",
+    chatPlaceholder: 'Dites-moi ce qui vous préoccupe…',
+    grounding: "Je suis là. Respirez. Vous n'êtes pas seul.",
+    intro_work: "D'accord {name}. Parlons du travail.",
+    intro_finance: "D'accord {name}. Parlons des finances.",
+    intro_future: "D'accord {name}. Clarifions votre direction.",
+    calmNote: 'Pas ici pour réparer votre vie. Ici pour vous aider à voir les prochaines étapes.Si vous ne voyez pas de notes, connectez-vous et recommencez. Elles apparaîtront lors de votre prochaine visite. Connectez-vous quand vous le souhaitez.',
+  },
 };
 
 const TERMS_VERSION = '2026-01-02';
@@ -296,63 +289,20 @@ export default function DashboardClientNotes() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
-const [notesOpen, setNotesOpen] = useState(
-  typeof window !== 'undefined' ? window.innerWidth > 768 : true
-);
+const [aiReplyCount, setAiReplyCount] = useState(0);
+const [showCalmNote, setShowCalmNote] = useState(false);
+
+
+  const [notesOpen, setNotesOpen] = useState(
+    typeof window !== 'undefined' ? window.innerWidth > 768 : true
+  );
 
   const [showDisclaimer, setShowDisclaimer] = useState(false);
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
-  /* funções, useEffect, handlers continuam */
-
-  const addNote = (text: string) => {
-    if (!text) return;
-
-    const clean = text
-      .replace(/\*\*|###|##|#/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    const topics: string[] = [];
-    const bulletMatch = clean.match(/[-•*]\s*([^-•*]+?)(?=[-•*]|$)/g);
-    
-    if (bulletMatch) {
-      bulletMatch.slice(0, 4).forEach(bullet => {
-        const topic = bullet
-          .replace(/[-•*]\s*/, '')
-          .split(':')[0]
-          .split('.')[0]
-          .trim();
-        if (topic.length > 10 && topic.length < 60) {
-          topics.push(topic);
-        }
-      });
-    }
-
-    if (topics.length === 0) {
-      const patterns = [
-        /(?:focus on|think about|consider|try)\s+([^.!?]{10,50})/gi,
-        /(?:skills?|strategies|steps?|actions?)[:\s]+([^.!?]{10,50})/gi,
-        /(?:you (?:should|can|might))\s+([^.!?]{10,50})/gi
-      ];
-
-      patterns.forEach(pattern => {
-        const matches = clean.matchAll(pattern);
-        for (const match of matches) {
-          if (match[1] && topics.length < 4) {
-            topics.push(match[1].trim());
-          }
-        }
-      });
-    }
-
-    topics.forEach(topic => {
-      setNotes((prev) =>
-        prev.some(n => n.toLowerCase().includes(topic.toLowerCase().substring(0, 15))) 
-          ? prev 
-          : [...prev, topic]
-      );
-    });
+  // Generate a unique guest ID (for terms acceptance only)
+  const generateGuestId = () => {
+    return `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
   // Check if user has already accepted current terms version
@@ -400,6 +350,29 @@ const [notesOpen, setNotesOpen] = useState(
     }
   };
 
+  // Save working note - ONLY for authenticated users
+  const saveWorkingNote = async (uid: string, content: string) => {
+    if (!content || content.trim().length === 0) {
+      console.log('Skipping empty note');
+      return;
+    }
+
+    console.log('Attempting to save note:', { uid, content });
+
+    const { error } = await supabase
+      .from('working_notes')
+      .insert({
+        user_id: uid,
+        content: content.trim(),
+      });
+
+    if (error) {
+      console.error('Error saving working note:', error);
+    } else {
+      console.log('Successfully saved note');
+    }
+  };
+
   // Handle disclaimer acceptance
   const handleDisclaimerAccept = async () => {
     if (!isGuest && userId) {
@@ -410,19 +383,18 @@ const [notesOpen, setNotesOpen] = useState(
         setShowDisclaimer(false);
       } else {
         console.error('Failed to save acceptance');
-        // Still allow them to proceed
         setHasAcceptedTerms(true);
         setShowDisclaimer(false);
       }
     } else {
-      // Guest mode - create anonymous record in Supabase
-      const anonymousId = `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Guest mode - create anonymous terms acceptance record only
+      const guestId = generateGuestId();
       
       try {
         const { error } = await supabase
           .from('terms_acceptance')
           .insert({
-            user_id: anonymousId,
+            user_id: guestId,
             terms_version: TERMS_VERSION,
             accepted_at: new Date().toISOString(),
           });
@@ -433,105 +405,134 @@ const [notesOpen, setNotesOpen] = useState(
       } catch (err) {
         console.error('Error logging guest acceptance:', err);
       } finally {
-        // Always allow them to proceed
         setHasAcceptedTerms(true);
         setShowDisclaimer(false);
       }
     }
   };
 
-  useEffect(() => {
-    const initializeUser = async () => {
-      try {
-        const guest = localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
-
-        if (guest) {
-          setIsGuest(true);
-          setPhase('profile');
-          setShowDisclaimer(true);
-          setHasAcceptedTerms(false);
-          setChecked(true);
-          return;
-        }
-
-        const { data } = await supabase.auth.getSession();
-        const session = data?.session;
-        
-        if (session?.user) {
-          const uid = session.user.id;
-          const email = session.user.email ?? null;
-          
-          setUserId(uid);
-          setUserEmail(email);
-
-          // Check if user has accepted current terms
-          const hasAccepted = await checkTermsAcceptance(uid);
-          setHasAcceptedTerms(hasAccepted);
-          setShowDisclaimer(!hasAccepted);
-          
-          setPhase('confirming');
-        } else {
-          // No auth - show disclaimer
-          setPhase('profile');
-          setShowDisclaimer(true);
-          setHasAcceptedTerms(false);
-        }
-        
-        setChecked(true);
-      } catch (error) {
-        console.error('Error initializing user:', error);
-        setPhase('profile');
-        setChecked(true);
-      }
-    };
-
-    initializeUser();
-  }, [sp]);
-
-  const handleSend = async () => {
-    if (!inputValue.trim() || isLoading) return;
-
-    const userMsg: ChatMessage = { role: 'user', text: inputValue };
-    setMessages((prev) => [...prev, userMsg]);
-    setInputValue('');
-    setIsLoading(true);
-
+useEffect(() => {
+  const initializeUser = async () => {
     try {
-      const res = await fetch('/api/agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [...messages, userMsg],
-          context: {
-            name,
-            pronoun,
-            reason,
-            lang,
-            mode: 'conversation',
-          },
-        }),
-      });
+      const guest = localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
+      if (guest) {
+        setIsGuest(true);
+        setPhase('profile');
+        setShowDisclaimer(true);
+        setHasAcceptedTerms(false);
+        setChecked(true);
+        return;
+      }
+      const { data } = await supabase.auth.getSession();
+      const session = data?.session;
+      
+      if (session?.user) {
+        const uid = session.user.id;
+        const email = session.user.email ?? null;
+        
+        setUserId(uid);
+        setUserEmail(email);
+        const hasAccepted = await checkTermsAcceptance(uid);
+        setHasAcceptedTerms(hasAccepted);
+        setShowDisclaimer(!hasAccepted);
+        
+        // 👇 ADD THIS: Load past notes for returning users
+        const { data: notesData } = await supabase
+          .from('working_notes')
+          .select('content')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(6);
 
-      const data = await res.json();
-
-      if (data?.reply) {
-  setMessages((prev) => [...prev, { role: 'assistant', text: data.reply }]);
-}
-
-if (data?.note) {
-  setNotes((prev) =>
-    prev.includes(data.note) ? prev : [...prev, data.note]
-  );
-}
-
-    } catch {
-      const fallback = "I'm here with you. Something went wrong on my side — can you try again?";
-      setMessages((prev) => [...prev, { role: 'assistant', text: fallback }]);
-      addNote(fallback);
-    } finally {
-      setIsLoading(false);
+        if (notesData && notesData.length > 0) {
+          setNotes(notesData.map(n => n.content));
+        }
+        // 👆 END OF NEW CODE
+        
+        setPhase('confirming');
+      } else {
+        setPhase('profile');
+        setShowDisclaimer(true);
+        setHasAcceptedTerms(false);
+      }
+      
+      setChecked(true);
+    } catch (error) {
+      console.error('Error initializing user:', error);
+      setPhase('profile');
+      setChecked(true);
     }
   };
+  initializeUser();
+}, [sp]);
+
+const handleSend = async () => {
+  if (!inputValue.trim() || isLoading) return;
+
+  const userMsg: ChatMessage = { role: 'user', text: inputValue };
+  setMessages((prev) => [...prev, userMsg]);
+  setInputValue('');
+  setIsLoading(true);
+
+  try {
+    const res = await fetch('/api/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [...messages, userMsg],
+        context: {
+          name,
+          pronoun,
+          reason,
+          lang,
+          userId, //ADD THIS LINE
+          mode: 'conversation',
+        },
+      }),
+    });
+
+    const data = await res.json();
+
+    // 1️⃣ Render AI reply
+    if (typeof data?.reply === 'string') {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: data.reply },
+      ]);
+    }
+setAiReplyCount(c => {
+  const next = c + 1;
+
+  if (next === 2) {
+    setShowCalmNote(true);
+    setTimeout(() => setShowCalmNote(false), 9000); // 9 seconds
+  }
+
+  return next;
+});
+
+
+    // 2️⃣ Save working note (UI + Supabase)
+    if (
+      typeof data?.note === 'string' &&
+      data.note.trim().length > 0 &&
+      typeof userId === 'string'
+    ) {
+      setNotes((prev) =>
+        prev.includes(data.note) ? prev : [...prev, data.note]
+      );
+
+      await saveWorkingNote(userId, data.note);
+    }
+
+  } catch (error) {
+    console.error('Error sending message:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -558,57 +559,43 @@ if (data?.note) {
           <div style={{ ...aiOrb, ...pulse }} />
         </div>
 
-       <div style={notesAuthBar}>
-{/* CALM NOTE – texto flutuante */}
-{phase === 'guided' && (
-  <div className="calm-note" style={calmNote}>
-    {T.calmNote}
-  </div>
-)}
+        <div style={notesAuthBar}>
+       
+          <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
+            {(['en', 'pt', 'es', 'fr'] as Lang[]).map(l => (
+              <button
+                key={l}
+                onClick={() => router.push(`/dashboard?lang=${l}`)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: '1px solid rgba(122,162,255,0.4)',
+                  background: l === lang ? '#7aa2ff' : 'transparent',
+                  color: l === lang ? '#000' : '#7aa2ff',
+                  cursor: 'pointer',
+                }}
+              >
+                {l.toUpperCase()}
+              </button>
+            ))}
+          </div>
 
+          <button onClick={() => router.push(`/?lang=${lang}`)} style={linkBtn}>
+            {T.back}
+          </button>
 
-
-
-
-  {/* Language switch */}
-  <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
-    {(['en', 'pt', 'es', 'fr'] as Lang[]).map(l => (
-      <button
-        key={l}
-        onClick={() => router.push(`/dashboard?lang=${l}`)}
-        style={{
-          padding: '4px 8px',
-          borderRadius: 6,
-          fontSize: 12,
-          fontWeight: 600,
-          border: '1px solid rgba(122,162,255,0.4)',
-          background: l === lang ? '#7aa2ff' : 'transparent',
-          color: l === lang ? '#000' : '#7aa2ff',
-          cursor: 'pointer',
-        }}
-      >
-        {l.toUpperCase()}
-      </button>
-    ))}
-  </div>
-
-  {/* Back */}
-  <button onClick={() => router.push(`/?lang=${lang}`)} style={linkBtn}>
-    {T.back}
-  </button>
-
-  {/* Auth */}
-  {userEmail ? (
-    <button onClick={handleSignOut} style={signOutBtn}>
-      {T.signout}
-    </button>
-  ) : (
-    <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
-      {T.signin}
-    </button>
-  )}
-</div>
-
+          {userEmail ? (
+            <button onClick={handleSignOut} style={signOutBtn}>
+              {T.signout}
+            </button>
+          ) : (
+            <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
+              {T.signin}
+            </button>
+          )}
+        </div>
 
         {phase !== 'confirming' && (
           <div style={label}>
@@ -630,7 +617,7 @@ if (data?.note) {
 
         {phase === 'profile' && (
           <div style={questionBox}>
-           <div style={question} className="question-text-mobile">{T.nameTitle}</div>
+            <div style={question} className="question-text-mobile">{T.nameTitle}</div>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -684,7 +671,7 @@ if (data?.note) {
           <div style={questionBox}>
             {step === 1 && (
               <>
-               <div style={question} className="question-text-mobile">{T.q1}</div>
+                <div style={question} className="question-text-mobile">{T.q1}</div>
                 <button
                   style={optBtn}
                   onClick={() => {
@@ -734,14 +721,13 @@ if (data?.note) {
                   style={primaryBtn}
                   onClick={() => {
                     const intro =
-  reason === 'work'
-    ? T.intro_work.replace('{name}', name)
-    : reason === 'finance'
-    ? T.intro_finance.replace('{name}', name)
-    : T.intro_future.replace('{name}', name);
+                      reason === 'work'
+                        ? T.intro_work.replace('{name}', name)
+                        : reason === 'finance'
+                        ? T.intro_finance.replace('{name}', name)
+                        : T.intro_future.replace('{name}', name);
 
                     setMessages([{ role: 'assistant', text: intro }]);
-                    addNote(intro);
                     setPhase('chat');
                   }}
                 >
@@ -756,32 +742,32 @@ if (data?.note) {
           <div style={chatWrapper}>
             <div style={chatMessages}>
               {messages.map((m, i) => (
-  <div 
-    key={i} 
-    style={m.role === 'assistant' ? aiMessage : userMessage}
-    className={m.role === 'assistant' ? 'ai-message-mobile' : 'user-message-mobile'}
-  >
-    {m.text}
-  </div>
-))}
+                <div 
+                  key={i} 
+                  style={m.role === 'assistant' ? aiMessage : userMessage}
+                  className={m.role === 'assistant' ? 'ai-message-mobile' : 'user-message-mobile'}
+                >
+                  {m.text}
+                </div>
+              ))}
               {isLoading && (
                 <div style={aiMessage}>
-                  <em>typing...</em>
+                  <em>{T.typing}</em>
                 </div>
               )}
             </div>
 
             <div style={chatBar}>
               <div style={{ display: 'flex', gap: 12 }}>
-              <input
-  value={inputValue}
-  onChange={(e) => setInputValue(e.target.value)}
-  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-  placeholder={T.chatPlaceholder}
-  style={chatInput}
-  className="chat-input-mobile"
-  disabled={isLoading}
-/>
+                <input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder={T.chatPlaceholder}
+                  style={chatInput}
+                  className="chat-input-mobile"
+                  disabled={isLoading}
+                />
                 <button
                   onClick={handleSend}
                   disabled={isLoading || !inputValue.trim()}
@@ -797,131 +783,146 @@ if (data?.note) {
           </div>
         )}
 
-       <div
-  style={{
-    position: 'fixed',
-    left: '38%',
-    top: 120,
-    width: 280,
-    borderRadius: 18,
-    background: '#F3F4FF',
-    border: '1px solid #D6D9FF',
-    color: '#2B2E5F',
-    padding: 16,
-    boxShadow: '0 20px 60px rgba(120,130,255,0.35)',
-    zIndex: 5,
-  }}
->
-  {/* HEADER */}
-<div
-  onClick={() => setNotesOpen(v => !v)}
-  style={{
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 6,
-    cursor: 'pointer',
-    userSelect: 'none',
-  }}
->
-  <strong>{T.notesTitle}</strong>
-  <span
+        <div
+          style={{
+            position: 'fixed',
+            left: '38%',
+            top: 120,
+            width: 280,
+            borderRadius: 18,
+            background: '#F3F4FF',
+            border: '1px solid #D6D9FF',
+            color: '#2B2E5F',
+            padding: 16,
+            boxShadow: '0 20px 60px rgba(120,130,255,0.35)',
+            zIndex: 5,
+          }}
+        >
+          {showCalmNote && (
+  <div
+    className="calm-note"
     style={{
-      fontSize: 16,
-      opacity: 0.7,
-      transform: notesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-      transition: 'transform 0.2s ease',
+      position: 'fixed',
+      left: '38%',
+      top: notesOpen ? 360 : 320,
+      width: 280,
+      borderRadius: 14,
+      background: 'rgba(15,21,51,0.95)',
+      border: '1px solid rgba(122,162,255,0.35)',
+      color: '#E5ECFF',
+      padding: 14,
+      boxShadow: '0 14px 40px rgba(92,124,250,0.35)',
+      zIndex: 5,
     }}
   >
-    ⌄
-  </span>
-</div>
+    {T.calmNote}
+  </div>
+)}
 
 
-  {/* BODY */}
-  {notesOpen && (
-    <>
-      {notes.length === 0 ? (
-        <span style={{ color: '#141a33', opacity: 0.9 }}>
-          {T.notesEmpty}
-        </span>
-      ) : (
-        notes.map((n, i) => (
-          <div key={i} style={{ marginBottom: 6 }}>
-            • {n}
+          {/* HEADER */}
+          <div
+            onClick={() => setNotesOpen(v => !v)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+          >
+            <strong>{T.notesTitle}</strong>
+            <span
+              style={{
+                fontSize: 16,
+                opacity: 0.7,
+                transform: notesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            >
+              ⌄
+            </span>
           </div>
-        ))
-      )}
-    </>
-  )}
-</div>
 
+          {/* BODY */}
+          {notesOpen && (
+            <>
+              {notes.length === 0 ? (
+                <span style={{ color: '#141a33', opacity: 0.9 }}>
+                  {T.notesEmpty}
+                </span>
+              ) : (
+                notes.map((n, i) => (
+                  <div key={i} style={{ marginBottom: 6 }}>
+                    • {n}
+                  </div>
+                ))
+              )}
+            </>
+          )}
+        </div>
 
         <style jsx global>{`
-  @media (min-width: 1024px) {
-    .ghost-symbol {
-      right: 18% !important;
-      top: 18% !important;
-    }
-  }
+          @media (min-width: 1024px) {
+            .ghost-symbol {
+              right: 18% !important;
+              top: 18% !important;
+            }
+          }
 
-  @media (max-width: 768px) {
-    .ghost-symbol {
-      right: 50% !important;
-      top: 58% !important;
-      transform: translate(50%, -50%) !important;
-      width: 420px;
-      height: 420px;
-      opacity: 0.18;
-    }
-@media (max-width: 768px) {
-  .calm-note {
-    left: 8px !important;      /* ~1.5 dedos da borda */
-    top: 240px !important;    /* um pouco abaixo do orb */
-    max-width: 250px !important;
+          @media (max-width: 768px) {
+            .ghost-symbol {
+              right: 50% !important;
+              top: 58% !important;
+              transform: translate(50%, -50%) !important;
+              width: 420px;
+              height: 420px;
+              opacity: 0.18;
+            }
 
-    font-size: 15px !important;
-    line-height: 1.55 !important;
-    text-align: left !important;
-  }
-}
+            .calm-note {
+              left: 8px !important;
+              top: 240px !important;
+              max-width: 250px !important;
+              font-size: 15px !important;
+              line-height: 1.55 !important;
+              text-align: left !important;
+            }
 
+            .ai-message-mobile {
+              font-size: 16px !important;
+              line-height: 1.6 !important;
+            }
+            
+            .user-message-mobile {
+              font-size: 16px !important;
+              line-height: 1.6 !important;
+            }
+            
+            .chat-input-mobile {
+              font-size: 16px !important;
+            }
+            
+            .question-text-mobile {
+              font-size: 16px !important;
+            }
+          }
 
-
-    /* ADD THESE NEW RULES FOR TEXT READABILITY */
-    .ai-message-mobile {
-      font-size: 16px !important;
-      line-height: 1.6 !important;
-    }
-    
-    .user-message-mobile {
-      font-size: 16px !important;
-      line-height: 1.6 !important;
-    }
-    
-    .chat-input-mobile {
-      font-size: 16px !important;
-    }
-    
-    .question-text-mobile {
-      font-size: 16px !important;
-    }
-  }
-
-  @keyframes pulse {
-    0% {
-      transform: scale(1);
-      box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
-    }
-    50% {
-      transform: scale(1.06);
-      box-shadow: 0 0 95px rgba(120, 160, 255, 0.65);
-    }
-    100% {
-      transform: scale(1);
-      box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
-    }
-  }
-`}</style>
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+              box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
+            }
+            50% {
+              transform: scale(1.06);
+              box-shadow: 0 0 95px rgba(120, 160, 255, 0.65);
+            }
+            100% {
+              transform: scale(1);
+              box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
+            }
+          }
+        `}</style>
       </div>
     </>
   );
@@ -958,8 +959,6 @@ const aiOrbWrap: React.CSSProperties = {
   zIndex: 2,
 };
 
-// Replace your aiOrb style with this (human face only)
-
 const aiOrb = {
   width: 200,
   height: 200,
@@ -968,17 +967,12 @@ const aiOrb = {
   backgroundPosition: 'center',
   backgroundSize: 'cover',
   backgroundRepeat: 'no-repeat',
-
-  // soften + humanize
   filter: 'brightness(1.05) contrast(0.98) saturate(0.95)',
   boxShadow: `
     0 0 40px rgba(120,140,255,0.25),
     inset 0 0 0 1px rgba(255,255,255,0.06)
   `,
 };
-
-
-
 
 const label: React.CSSProperties = {
   position: 'absolute',
@@ -995,7 +989,6 @@ const linkBtn = {
   cursor: 'pointer',
 };
 
-/* === AUTH BUTTONS (ABOVE WORKING NOTES) === */
 const notesAuthBar: React.CSSProperties = {
   position: 'fixed',
   left: '38%',
@@ -1036,35 +1029,32 @@ const confirmBox: React.CSSProperties = {
 
 const questionBox: React.CSSProperties = {
   position: 'absolute',
-  bottom: 80, // desce a caixa
+  bottom: 80,
   left: 48,
   maxWidth: 520,
   zIndex: 3,
-
-  background: '#EEF3FF', // mesmo tom do Working Notes
+  background: '#EEF3FF',
   border: '1px solid rgba(92,124,250,0.45)',
   borderRadius: 18,
   padding: 20,
   boxShadow: '0 14px 40px rgba(92,124,250,0.25)',
-  color: '#1E2A5A', // texto mais vivo
+  color: '#1E2A5A',
 };
 
 const question = {
   marginBottom: 14,
   fontSize: 15,
-  color: '#1E2A5A',  // NEW - dark blue, matches questionBox text
-  fontWeight: 600,   // ADD - makes it bold
+  color: '#1E2A5A',
+  fontWeight: 600,
 };
 
 const nameInput = {
   width: 340,
   padding: '12px 14px',
   borderRadius: 12,
-background: '#11172e',
-color: '#e5ecff',
-border: '1px solid rgba(122,162,255,0.3)',
-
-
+  background: '#11172e',
+  color: '#e5ecff',
+  border: '1px solid rgba(122,162,255,0.3)',
 };
 
 const primaryBtn = {
@@ -1082,10 +1072,10 @@ const optBtn: React.CSSProperties = {
   marginBottom: 10,
   padding: '10px 14px',
   borderRadius: 10,
- background: '#141a33',
-color: '#e5ecff',
-border: '1px solid rgba(122,162,255,0.35)',
-boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+  background: '#141a33',
+  color: '#e5ecff',
+  border: '1px solid rgba(122,162,255,0.35)',
+  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
   width: 340,
   textAlign: 'left',
   cursor: 'pointer',
@@ -1093,10 +1083,10 @@ boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
 
 const optBtnActive = {
   ...optBtn,
-  background: '#7aa2ff',  // NEW - bright blue
-  color: '#000',          // ADD - dark text
-  fontWeight: 700,        // ADD - bold
-  border: '2px solid #5c7cfa',  // ADD - stronger border
+  background: '#7aa2ff',
+  color: '#000',
+  fontWeight: 700,
+  border: '2px solid #5c7cfa',
 };
 
 const chatWrapper: React.CSSProperties = {
@@ -1118,14 +1108,11 @@ const aiMessage: React.CSSProperties = {
   padding: '12px 16px',
   borderRadius: 14,
   maxWidth: 520,
-
   background: 'linear-gradient(135deg, #E6EBFF 0%, #F2F5FF 100%)',
   color: '#1E2A5A',
-
   border: '1px solid rgba(122,162,255,0.45)',
   boxShadow: '0 12px 36px rgba(122,162,255,0.35)',
 };
-
 
 const userMessage = {
   marginBottom: 8,
@@ -1145,38 +1132,28 @@ const chatInput: React.CSSProperties = {
   flex: 1,
   padding: 16,
   borderRadius: 16,
-
   background: '#0F1533',
   color: '#E5ECFF',
-
   border: '1px solid rgba(122,162,255,0.35)',
   boxShadow: '0 0 0 2px rgba(122,162,255,0.45)',
-
   outline: 'none',
 };
-
 
 const pulse = {
   animation: 'pulse 3.2s ease-in-out infinite',
 };
+
 const calmNote: React.CSSProperties = {
   position: 'absolute',
-
-  /* 👇 AQUI você ajusta a posição */
-  top: 180,      // sobe / desce
-  left: 10,     // vai pra esquerda / direita
-
+  top: 180,
+  left: 10,
   maxWidth: 360,
-
-  color: '#8FA6FF',        // azul AI
-  fontSize: 18,            // tamanho no desktop
+  color: '#8FA6FF',
+  fontSize: 18,
   lineHeight: 1.55,
   fontWeight: 500,
-
   opacity: 0.9,
   textShadow: '0 0 18px rgba(120,160,255,0.35)',
-
   zIndex: 2,
   pointerEvents: 'none',
 };
-
