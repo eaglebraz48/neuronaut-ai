@@ -411,6 +411,7 @@ const [showCalmNote, setShowCalmNote] = useState(false);
     }
   };
 
+// First useEffect - Check initial session on page load
 useEffect(() => {
   const initializeUser = async () => {
     try {
@@ -423,6 +424,7 @@ useEffect(() => {
         setChecked(true);
         return;
       }
+      
       const { data } = await supabase.auth.getSession();
       const session = data?.session;
       
@@ -436,18 +438,16 @@ useEffect(() => {
         setHasAcceptedTerms(hasAccepted);
         setShowDisclaimer(!hasAccepted);
         
-        // 👇 ADD THIS: Load past notes for returning users
+        // Load past notes for returning users
         const { data: notesData } = await supabase
           .from('working_notes')
           .select('content')
           .eq('user_id', uid)
           .order('created_at', { ascending: false })
           .limit(6);
-
         if (notesData && notesData.length > 0) {
           setNotes(notesData.map(n => n.content));
         }
-        // 👆 END OF NEW CODE
         
         setPhase('confirming');
       } else {
@@ -463,9 +463,55 @@ useEffect(() => {
       setChecked(true);
     }
   };
+  
   initializeUser();
 }, [sp]);
 
+// Second useEffect - Listen for auth state changes (magic link, sign in, sign out)
+useEffect(() => {
+  const { data: authListener } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      console.log('Auth event:', event, session); // Debug log
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        const uid = session.user.id;
+        const email = session.user.email ?? null;
+        
+        setUserId(uid);
+        setUserEmail(email);
+        setIsGuest(false);
+        
+        const hasAccepted = await checkTermsAcceptance(uid);
+        setHasAcceptedTerms(hasAccepted);
+        setShowDisclaimer(!hasAccepted);
+        
+        // Load past notes
+        const { data: notesData } = await supabase
+          .from('working_notes')
+          .select('content')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(6);
+
+        if (notesData && notesData.length > 0) {
+          setNotes(notesData.map(n => n.content));
+        }
+        
+        setPhase('confirming');
+        setChecked(true);
+      } else if (event === 'SIGNED_OUT') {
+        setUserId(null);
+        setUserEmail(null);
+        setNotes([]);
+        setPhase('profile');
+      }
+    }
+  );
+
+  return () => {
+    authListener.subscription.unsubscribe();
+  };
+}, []);
 const handleSend = async () => {
   if (!inputValue.trim() || isLoading) return;
 
