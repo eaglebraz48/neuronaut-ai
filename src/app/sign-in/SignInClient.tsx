@@ -18,6 +18,7 @@ const L: Record<Lang, any> = {
     send: 'Send magic link',
     back: '← Back to home',
     sent: 'Check your email for the login link!',
+    reviewerEmail: 'Reviewer access email',
     password: 'Password (reviewers only)',
     signinpw: 'Sign in with password',
     guest: 'Continue as guest',
@@ -28,6 +29,7 @@ const L: Record<Lang, any> = {
     send: 'Enviar enlace mágico',
     back: '← Volver al inicio',
     sent: '¡Revisa tu correo para el enlace!',
+    reviewerEmail: 'Correo del revisor',
     password: 'Contraseña (solo revisores)',
     signinpw: 'Entrar con contraseña',
     guest: 'Entrar como invitado',
@@ -37,38 +39,30 @@ const L: Record<Lang, any> = {
 function PageInner() {
   const sp = useSearchParams();
   const router = useRouter();
- const rawLang = sp.get('lang');
-const lang: Lang = isLang(rawLang) ? rawLang : 'en';
-const t = L[lang];
+  const rawLang = sp.get('lang');
+  const lang: Lang = isLang(rawLang) ? rawLang : 'en';
+  const t = L[lang];
 
-
-  const [email, setEmail] = React.useState('');
+  const [magicEmail, setMagicEmail] = React.useState('');
+  const [reviewerEmail, setReviewerEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [status, setStatus] = React.useState<'idle' | 'sent'>('idle');
   const [busy, setBusy] = React.useState(false);
 
-  // ❌ NO auto-redirect on mount
-  // Sign-in page must NEVER decide auth state
-
   async function sendMagicLink() {
-    if (!email || !email.includes('@')) {
-      alert('Please enter a valid email.');
+    if (!magicEmail || !magicEmail.includes('@')) {
+      alert('Enter a valid email.');
       return;
     }
-
     setBusy(true);
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?redirect=/dashboard&lang=${lang}`;
-
-      const res = await fetch('/api/auth/magic-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, redirectTo }),
+      const { error } = await supabase.auth.signInWithOtp({
+        email: magicEmail,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=/dashboard&phase=confirming&lang=${lang}`,
+        },
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-
+      if (error) throw error;
       setStatus('sent');
     } catch (err: any) {
       alert(err?.message ?? 'Unexpected error.');
@@ -78,16 +72,21 @@ const t = L[lang];
   }
 
   async function reviewerLogin() {
-    if (!email || !password) {
+    if (!reviewerEmail || !password) {
       alert('Enter email + password.');
       return;
     }
-
     setBusy(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert(error.message);
-      else router.replace(`/dashboard?lang=${lang}`);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: reviewerEmail,
+        password,
+      });
+      if (error) {
+        alert(error.message);
+      } else {
+        router.replace(`/dashboard?phase=confirming&lang=${lang}&reviewer=1`);
+      }
     } finally {
       setBusy(false);
     }
@@ -95,7 +94,7 @@ const t = L[lang];
 
   function guestLogin() {
     localStorage.setItem('neuronaut_guest', '1');
-    router.replace(`/dashboard?lang=${lang}`);
+    router.replace(`/dashboard?lang=${lang}&guest=1`);
   }
 
   return (
@@ -106,11 +105,12 @@ const t = L[lang];
         <p>{t.sent}</p>
       ) : (
         <>
+          {/* MAGIC LINK */}
           <input
             type="email"
-            value={email}
+            value={magicEmail}
             placeholder={t.email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setMagicEmail(e.target.value)}
             disabled={busy}
             style={{
               width: 320,
@@ -127,7 +127,24 @@ const t = L[lang];
             {t.send}
           </button>
 
-          <div style={{ marginTop: 10, opacity: 0.7 }}>Reviewer sign in</div>
+          {/* REVIEWER */}
+          <input
+            type="email"
+            value={reviewerEmail}
+            placeholder={t.reviewerEmail}
+            onChange={(e) => setReviewerEmail(e.target.value)}
+            disabled={busy}
+            style={{
+              marginTop: 18,
+              width: 320,
+              padding: '12px 14px',
+              borderRadius: 8,
+              border: '1px solid #cbd5e1',
+              background: '#fff',
+              color: '#000',
+              fontSize: 16,
+            }}
+          />
 
           <input
             type="password"

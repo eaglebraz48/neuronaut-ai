@@ -77,7 +77,7 @@ export default function HomeClient() {
         </div>
       </div>
 
-      <div style={footer}>© 2025 Arison8, LLC · Neuronaut AI</div>
+      <div style={footer}>© 2026 Arison8, LLC · Neuronaut AI</div>
 
       <style jsx global>{`
         @keyframes slowPulse {
