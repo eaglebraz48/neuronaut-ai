@@ -1,11 +1,11 @@
 import { Suspense } from "react";
-import DashboardClientNotes from "./DashboardClientNotes";
+import DashboardClient from "./DashboardClient";
 
 
 export default function DashboardPage() {
   return (
     <Suspense fallback={null}>
-      <DashboardClientNotes />
+      <DashboardClient />
 
     </Suspense>
   );

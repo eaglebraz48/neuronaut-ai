@@ -22,6 +22,7 @@ type CopySchema = {
   guest: string;
   signin: string;
   signout: string;
+delete: string;  // ← ADD THIS LINE
   confirmTitle: string;
   confirmBtn: string;
   nameTitle: string;
@@ -75,6 +76,8 @@ const COPY: Record<Lang, CopySchema> = {
     typing: 'typing…',
     notesTitle: 'Working Notes',
     notesEmpty: '(waiting for conversation…)',
+delete: 'Delete account',
+
     q1: 'Are you here mainly because of:',
     q1_work: 'Work or job uncertainty',
     q1_finance: 'Financial stress',
@@ -127,6 +130,8 @@ const COPY: Record<Lang, CopySchema> = {
     typing: 'digitando…',
     notesTitle: 'Anotações',
     notesEmpty: '(aguardando conversa…)',
+delete: 'Excluir conta',
+
     q1: 'Você está aqui principalmente por:',
     q1_work: 'Incerteza no trabalho',
     q1_finance: 'Estresse financeiro',
@@ -179,6 +184,8 @@ const COPY: Record<Lang, CopySchema> = {
     typing: 'escribiendo…',
     notesTitle: 'Notas',
     notesEmpty: '(esperando conversación…)',
+delete: 'Eliminar cuenta',
+
     q1: '¿Estás aquí principalmente por:',
     q1_work: 'Incertidumbre laboral',
     q1_finance: 'Estrés financiero',
@@ -231,6 +238,8 @@ const COPY: Record<Lang, CopySchema> = {
     typing: 'écrit…',
     notesTitle: 'Notes',
     notesEmpty: '(en attente de la conversation…)',
+delete: 'Supprimer le compte',
+
     q1: 'Êtes-vous ici principalement pour :',
     q1_work: 'Incertitude professionnelle',
     q1_finance: 'Stress financier',
@@ -410,6 +419,25 @@ const [showCalmNote, setShowCalmNote] = useState(false);
       }
     }
   };
+const handleDelete = async () => {
+  const isReviewer = sp.get('reviewer') === '1';
+
+  if (isReviewer) {
+    alert('Review mode — do not delete this account.\n\nThis popup demonstrates what users would see when deleting.');
+    return;
+  }
+
+  if (!confirm('Delete account and all stored data?')) return;
+
+  const res = await fetch('/api/delete-account', { method: 'POST' });
+  const json = await res.json();
+
+  if (json.ok) {
+    await supabase.auth.signOut();
+    router.push('/?lang=' + lang);
+  }
+};
+
 
 // First useEffect - Check initial session on page load
 useEffect(() => {
@@ -499,12 +527,13 @@ useEffect(() => {
         
         setPhase('confirming');
         setChecked(true);
-      } else if (event === 'SIGNED_OUT') {
-        setUserId(null);
-        setUserEmail(null);
-        setNotes([]);
-        setPhase('profile');
-      }
+   } else if (event === 'SIGNED_OUT') {
+  setUserId(null);
+  setUserEmail(null);
+  setNotes([]);
+  router.push(`/?lang=${lang}`);
+}
+
     }
   );
 
@@ -586,6 +615,7 @@ setAiReplyCount(c => {
   };
 
   if (!checked) return null;
+const isReviewer = sp.get('reviewer') === '1';
 
   return (
     <>
@@ -632,18 +662,30 @@ setAiReplyCount(c => {
             {T.back}
           </button>
 
-          {userEmail ? (
-            <button onClick={handleSignOut} style={signOutBtn}>
-              {T.signout}
-            </button>
-          ) : (
-            <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
-              {T.signin}
-            </button>
-          )}
-        </div>
+         {userEmail ? (
+  <>
+    <button onClick={handleSignOut} style={signOutBtn}>
+      {T.signout}
+    </button>
 
-        {phase !== 'confirming' && (
+    <button
+      onClick={handleDelete}
+      style={{
+        ...signOutBtn,
+        background: '#6b7280', // neutral gray
+      }}
+    >
+      {T.delete}
+    </button>
+  </>
+) : (
+  <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
+    {T.signin}
+  </button>
+)}
+
+    </div>
+                    {phase !== 'confirming' && (
           <div style={label}>
             <div>NEURONAUT</div>
             <div style={{ opacity: 0.6 }}>{T.listening}</div>
@@ -844,28 +886,6 @@ setAiReplyCount(c => {
             zIndex: 5,
           }}
         >
-          {showCalmNote && (
-  <div
-    className="calm-note"
-    style={{
-      position: 'fixed',
-      left: '38%',
-      top: notesOpen ? 360 : 320,
-      width: 280,
-      borderRadius: 14,
-      background: 'rgba(15,21,51,0.95)',
-      border: '1px solid rgba(122,162,255,0.35)',
-      color: '#E5ECFF',
-      padding: 14,
-      boxShadow: '0 14px 40px rgba(92,124,250,0.35)',
-      zIndex: 5,
-    }}
-  >
-    {T.calmNote}
-  </div>
-)}
-
-
           {/* HEADER */}
           <div
             onClick={() => setNotesOpen(v => !v)}
@@ -908,6 +928,26 @@ setAiReplyCount(c => {
           )}
         </div>
 
+        {showCalmNote && (
+          <div
+            className="calm-note"
+            style={{
+              position: 'fixed',
+              left: '38%',
+              top: notesOpen ? 360 : 320,
+              width: 280,
+              borderRadius: 14,
+              background: 'rgba(15,21,51,0.95)',
+              border: '1px solid rgba(122,162,255,0.35)',
+              color: '#E5ECFF',
+              padding: 14,
+              boxShadow: '0 14px 40px rgba(92,124,250,0.35)',
+              zIndex: 5,
+            }}
+          >
+            {T.calmNote}
+          </div>
+        )}
         <style jsx global>{`
           @media (min-width: 1024px) {
             .ghost-symbol {
@@ -939,40 +979,27 @@ setAiReplyCount(c => {
               font-size: 16px !important;
               line-height: 1.6 !important;
             }
-            
+
             .user-message-mobile {
               font-size: 16px !important;
               line-height: 1.6 !important;
             }
-            
+
             .chat-input-mobile {
               font-size: 16px !important;
             }
-            
+
             .question-text-mobile {
               font-size: 16px !important;
             }
           }
-
-          @keyframes pulse {
-            0% {
-              transform: scale(1);
-              box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
-            }
-            50% {
-              transform: scale(1.06);
-              box-shadow: 0 0 95px rgba(120, 160, 255, 0.65);
-            }
-            100% {
-              transform: scale(1);
-              box-shadow: 0 0 60px rgba(120, 160, 255, 0.35);
-            }
-          }
         `}</style>
       </div>
-    </>
-  );
+     </>
+    );
 }
+
+
 
 /* ================= STYLES ================= */
 
@@ -1014,10 +1041,8 @@ const aiOrb = {
   backgroundSize: 'cover',
   backgroundRepeat: 'no-repeat',
   filter: 'brightness(1.05) contrast(0.98) saturate(0.95)',
-  boxShadow: `
-    0 0 40px rgba(120,140,255,0.25),
-    inset 0 0 0 1px rgba(255,255,255,0.06)
-  `,
+  boxShadow: '0 0 40px rgba(120,140,255,0.25), inset 0 0 1px rgba(255,255,255,0.06)',
+
 };
 
 const label: React.CSSProperties = {
@@ -1202,4 +1227,5 @@ const calmNote: React.CSSProperties = {
   textShadow: '0 0 18px rgba(120,160,255,0.35)',
   zIndex: 2,
   pointerEvents: 'none',
-};
+ };
+   
