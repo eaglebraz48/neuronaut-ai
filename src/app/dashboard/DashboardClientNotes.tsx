@@ -635,7 +635,7 @@ const isReviewer = sp.get('reviewer') === '1';
           <div style={{ ...aiOrb, ...pulse }} />
         </div>
 
-        <div style={notesAuthBar}>
+        <div style={notesAuthBar} className="notes-auth-mobile">
        
           <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
             {(['en', 'pt', 'es', 'fr'] as Lang[]).map(l => (
@@ -664,19 +664,25 @@ const isReviewer = sp.get('reviewer') === '1';
 
          {userEmail ? (
   <>
-    <button onClick={handleSignOut} style={signOutBtn}>
-      {T.signout}
-    </button>
+<button
+  onClick={handleSignOut}
+  style={signOutBtn}
+  className="auth-btn-mobile"
+>
+  {T.signout}
+</button>
 
-    <button
-      onClick={handleDelete}
-      style={{
-        ...signOutBtn,
-        background: '#6b7280', // neutral gray
-      }}
-    >
-      {T.delete}
-    </button>
+<button
+  onClick={handleDelete}
+  style={{
+    ...signOutBtn,
+    background: '#6b7280',
+  }}
+  className="auth-btn-mobile"
+>
+  {T.delete}
+</button>
+
   </>
 ) : (
   <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
@@ -992,7 +998,46 @@ const isReviewer = sp.get('reviewer') === '1';
             .question-text-mobile {
               font-size: 16px !important;
             }
+
           }
+@media (max-width: 768px) {
+  .notes-auth-mobile {
+    position: fixed !important;
+    left: 8px !important;
+    right: 8px !important;
+    top: 60px !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    z-index: 6 !important;
+  }
+
+  .auth-btn-mobile {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+  }
+
+ .notes-dropdown {
+  max-width: 92% !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  top: 140px !important;
+
+}
+.notes-dropdown {
+  top: 200px !important;   /* antes estava 140 */
+  z-index: 9999 !important; /* força ficar acima */
+}
+
+.notes-content {
+  max-height: 420px !important; /* antes 300/350 */
+  overflow-y: auto !important;
+}
+
+}
+
         `}</style>
       </div>
      </>
