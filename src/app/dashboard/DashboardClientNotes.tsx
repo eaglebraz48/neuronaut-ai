@@ -597,7 +597,7 @@ setAiReplyCount(c => {
         prev.includes(data.note) ? prev : [...prev, data.note]
       );
 
-      await saveWorkingNote(userId, data.note);
+  
     }
 
   } catch (error) {
