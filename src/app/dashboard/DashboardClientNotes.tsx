@@ -293,6 +293,29 @@ export default function DashboardClientNotes() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
+const [country, setCountry] = useState('');
+const [voiceOn, setVoiceOn] = useState(true);
+/* ================= VOICE ================= */
+const speak = (text: string) => {
+  if (!voiceOn) return; // 🔥 HARD STOP (voice disabled)
+
+  const msg = new SpeechSynthesisUtterance(text);
+
+  const voices = window.speechSynthesis.getVoices();
+
+  const female =
+    voices.find(v =>
+      v.name.toLowerCase().includes('female') ||
+      v.name.toLowerCase().includes('zira') ||
+      v.name.toLowerCase().includes('samantha') ||
+      v.name.toLowerCase().includes('google us english')
+    ) || voices[0];
+
+  msg.voice = female;
+
+  window.speechSynthesis.speak(msg);
+};
+
   const [pronoun, setPronoun] = useState<Pronoun>(null);
   const [inputValue, setInputValue] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -561,6 +584,7 @@ const handleSend = async () => {
           reason,
           lang,
           userId, //ADD THIS LINE
+          country, 
           mode: 'conversation',
         },
       }),
@@ -569,12 +593,15 @@ const handleSend = async () => {
     const data = await res.json();
 
     // 1️⃣ Render AI reply
-    if (typeof data?.reply === 'string') {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', text: data.reply },
-      ]);
-    }
+if (typeof data?.reply === 'string') {
+  setMessages((prev) => [
+    ...prev,
+    { role: 'assistant', text: data.reply },
+  ]);
+
+  speak(data.reply); // 🔥 THIS LINE MAKES IT TALK
+}
+
 setAiReplyCount(c => {
   const next = c + 1;
 
@@ -661,6 +688,12 @@ const isReviewer = sp.get('reviewer') === '1';
           <button onClick={() => router.push(`/?lang=${lang}`)} style={linkBtn}>
             {T.back}
           </button>
+<button
+  onClick={() => setVoiceOn(v => !v)}
+  style={linkBtn}
+>
+  {voiceOn ? '🔊 Voice On' : '🔇 Voice Off'}
+</button>
 
          {userEmail ? (
   <>
@@ -718,7 +751,12 @@ const isReviewer = sp.get('reviewer') === '1';
               placeholder={T.namePlaceholder}
               style={nameInput}
             />
-
+<input
+  value={country}
+  onChange={(e) => setCountry(e.target.value)}
+  placeholder="Your country"
+  style={{ ...nameInput, marginTop: 8 }}
+/>
             <div style={{ marginTop: 12 }}>
               <button
                 style={pronoun === 'neutral' ? optBtnActive : optBtn}
@@ -821,8 +859,10 @@ const isReviewer = sp.get('reviewer') === '1';
                         ? T.intro_finance.replace('{name}', name)
                         : T.intro_future.replace('{name}', name);
 
-                    setMessages([{ role: 'assistant', text: intro }]);
-                    setPhase('chat');
+                  setMessages([{ role: 'assistant', text: intro }]);
+speak(intro); // 🔥 welcome voice
+setPhase('chat');
+
                   }}
                 >
                   {T.startTalking}
@@ -883,6 +923,8 @@ const isReviewer = sp.get('reviewer') === '1';
             left: '38%',
             top: 120,
             width: 280,
+    maxHeight: 320,      // 👈 ADD
+    overflowY: 'auto',   // 👈 ADD
             borderRadius: 18,
             background: '#F3F4FF',
             border: '1px solid #D6D9FF',

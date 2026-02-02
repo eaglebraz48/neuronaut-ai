@@ -46,49 +46,36 @@ const LANG_NAMES: Record<string, string> = {
   fr: 'French',
 };
 
-/* ================= SYSTEM PROMPT ================= */
-const SYSTEM_PROMPT = `
+/* ================= BASE SYSTEM PROMPT ================= */
+const BASE_SYSTEM_PROMPT = `
 You are NEURONAUT — a career clarity assistant.
 
 STYLE:
 - Short replies (1–3 sentences)
 - One idea only
 - Calm, human
-- No explanations unless asked
 
 INTELLIGENCE:
-- Use the user's previous notes as behavioral signals
-- Detect patterns (stress, confusion, indecision, fear)
-- If patterns repeat, suggest concrete next steps
-- Be proactive, not reactive
-- Offer guidance, not generic advice
+- Use previous notes as behavioral signals
+- Detect patterns (stress, confusion, indecision)
+- Suggest concrete next steps
+- Be proactive
 
 RULES:
 - Always reply in the user's language
-- Never mention databases or systems
+- Never mention systems or databases
 `;
+
+/* ================= MEMORY FILTER ================= */
 function isMemorySafe(note: string): boolean {
   const banned = [
-    'cannot access',
-    'can’t access',
-    'please provide',
-    'sorry',
-    'i can’t',
-    'i cannot',
-    'i am here to help',
-    'notes are saved',
-    'ask me',
-    'let me know',
+    'cannot access','can’t access','please provide','sorry',
+    'i can’t','i cannot','ask me','let me know'
   ];
 
   const lower = note.toLowerCase();
-
-  // reject meta / weak / AI-facing notes
   if (banned.some(b => lower.includes(b))) return false;
-
-  // must be factual, not instructional
-  if (lower.startsWith('research ') || lower.startsWith('consider '))
-    return false;
+  if (lower.startsWith('research ') || lower.startsWith('consider ')) return false;
 
   return true;
 }
@@ -97,6 +84,7 @@ function isMemorySafe(note: string): boolean {
 export async function POST(req: Request) {
   try {
     const { messages, context } = await req.json();
+
     if (!Array.isArray(messages)) {
       return NextResponse.json({ reply: 'Tell me what’s on your mind.' });
     }
@@ -111,11 +99,23 @@ export async function POST(req: Request) {
       });
     }
 
+    /* ================= USER CONTEXT ================= */
+
     const lang = context?.lang || detectLang(lastUserMsg);
     const langName = LANG_NAMES[lang];
+
     const userId = context?.userId || null;
 
-    /* ================= FETCH LAST NOTES ================= */
+    const userName =
+      context?.name
+        ? context.name.charAt(0).toUpperCase() + context.name.slice(1)
+        : null;
+
+    const country =
+      context?.country?.trim() || null;
+
+    /* ================= FETCH NOTES ================= */
+
     let pastNotesText = '';
 
     if (userId) {
@@ -126,21 +126,48 @@ export async function POST(req: Request) {
         .order('created_at', { ascending: false })
         .limit(6);
 
-      if (data && data.length > 0) {
+      if (data?.length) {
         pastNotesText =
           '\nPrevious context:\n' +
           data.map(n => `- ${n.content}`).join('\n');
       }
     }
 
+    /* ================= BUILD SYSTEM MESSAGE ================= */
+
+    const systemPrompt = `
+${BASE_SYSTEM_PROMPT}
+
+${userName ? `The user's name is ${userName}. Address them naturally by name.` : ''}
+
+${
+  country
+    ? `
+The user lives in ${country}.
+Tailor all education, career, and financial advice specifically to that country.
+Mention local options when helpful.
+`
+    : `
+If country is unknown, politely ask once:
+"Which country are you in so I can tailor advice better?"
+Do not ask repeatedly after they answer.
+`
+}
+
+If local resources matter, you may ask for their city.
+Ask only when necessary, never upfront.
+
+Language: ${langName}
+
+${pastNotesText}
+`;
+
     /* ================= MAIN CHAT ================= */
+
     const chatResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        {
-          role: 'system',
-          content: SYSTEM_PROMPT + pastNotesText,
-        },
+        { role: 'system', content: systemPrompt },
         ...messages.map((m: any) => ({
           role: m.role,
           content: m.text,
@@ -152,21 +179,17 @@ export async function POST(req: Request) {
       chatResponse.choices[0]?.message?.content?.trim() ?? '';
 
     /* ================= NOTE EXTRACTION ================= */
-const NOTE_PROMPT = `
-Write ONE short working note in FIRST PERSON.
+
+    const NOTE_PROMPT = `
+Write ONE short working note.
 
 Rules:
-- ${langName} only
+- ${langName}
 - 6–12 words
-- First person voice (I / Estou / Estoy / Je)
-- Natural, human phrasing
-- No names
-- No "user"
-- No punctuation
-- Reflect the speaker’s own perspective
-- Use correct gendered grammar when applicable
+- first person
+- no names
+- natural phrasing
 `;
-
 
     const noteResponse = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -182,22 +205,17 @@ Rules:
       ],
     });
 
-    let note =
+    const note =
       noteResponse.choices[0]?.message?.content?.trim() ?? null;
 
-   if (note && userId && isMemorySafe(note)) {
-  await supabase.from('working_notes').insert({
-    user_id: userId,
-    content: note,
-  });
-}
+    if (note && userId && isMemorySafe(note)) {
+      await supabase.from('working_notes').insert({
+        user_id: userId,
+        content: note,
+      });
+    }
 
-
-   return NextResponse.json({
-  reply,
-  note,
-});
-
+    return NextResponse.json({ reply, note });
 
   } catch (err) {
     console.error(err);
