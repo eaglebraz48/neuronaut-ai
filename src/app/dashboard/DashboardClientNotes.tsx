@@ -611,7 +611,7 @@ setAiReplyCount(c => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push(`/?lang=${lang}`);
+    window.location.href = `/?lang=${lang}`;
   };
 
   if (!checked) return null;
