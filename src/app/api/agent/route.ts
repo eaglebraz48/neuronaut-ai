@@ -162,21 +162,92 @@ Language: ${langName}
 ${pastNotesText}
 `;
 
-    /* ================= MAIN CHAT ================= */
+   /* ================= MAIN CHAT ================= */
+/* ================= LANGUAGE SUGGESTION (SMART EARLY EXIT) ================= */
 
-    const chatResponse = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...messages.map((m: any) => ({
-          role: m.role,
-          content: m.text,
-        })),
-      ],
-    });
+/* Detect preferred language based on country */
+function inferPreferredLang(
+  country: string | null,
+  detected: 'pt' | 'es' | 'fr' | 'en'
+): 'pt' | 'es' | 'fr' | 'en' {
 
-    const reply =
-      chatResponse.choices[0]?.message?.content?.trim() ?? '';
+  if (!country) return detected;
+
+  const c = country.toLowerCase();
+
+  /* Portuguese */
+  const PT = [
+    'brazil','brasil','portugal','angola','mozambique','cape verde'
+  ];
+
+  /* Spanish — ALL LATAM + Spain */
+  const ES = [
+    'mexico','argentina','colombia','chile','peru','uruguay','paraguay',
+    'bolivia','ecuador','venezuela','guatemala','honduras','panama',
+    'costa rica','nicaragua','el salvador','dominican republic','cuba',
+    'spain','españa'
+  ];
+
+  /* French */
+  const FR = [
+    'france','canada','quebec','haiti','belgium','switzerland',
+    'senegal','ivory coast','cameroon'
+  ];
+
+  if (PT.some(p => c.includes(p))) return 'pt';
+  if (ES.some(p => c.includes(p))) return 'es';
+  if (FR.some(p => c.includes(p))) return 'fr';
+
+  return detected;
+}
+
+
+/* Only suggest when country language ≠ selected UI language */
+function buildLanguageSuggestion(
+  name: string | null,
+  selectedLang: 'pt' | 'es' | 'fr' | 'en',
+  country: string | null
+): string | null {
+
+  const preferred = inferPreferredLang(country, selectedLang);
+
+  /* already matching → do nothing */
+  if (preferred === selectedLang) return null;
+
+  const first = name ? `Hi ${name}, ` : 'Hi, ';
+
+  const map: Record<string, string> = {
+    pt: `${first}vejo que você pode preferir português. Se mudar o idioma no topo da página, posso falar com você de forma mais pessoal.`,
+    es: `${first}parece que prefieres español. Cambia el idioma arriba y puedo ayudarte mejor.`,
+    fr: `${first}je vois que vous préférez le français. Changez la langue en haut pour une aide plus personnalisée.`,
+  };
+
+  return map[preferred] ?? null;
+}
+
+
+const suggestion = buildLanguageSuggestion(userName, lang, country);
+
+if (suggestion) {
+  return NextResponse.json({ reply: suggestion });
+}
+
+
+/* ================= NORMAL AI CHAT ================= */
+
+const chatResponse = await openai.chat.completions.create({
+  model: 'gpt-4o-mini',
+  messages: [
+    { role: 'system', content: systemPrompt },
+    ...messages.map((m: any) => ({
+      role: m.role,
+      content: m.text,
+    })),
+  ],
+});
+
+const reply =
+  chatResponse.choices[0]?.message?.content?.trim() ?? '';
 
     /* ================= NOTE EXTRACTION ================= */
 
