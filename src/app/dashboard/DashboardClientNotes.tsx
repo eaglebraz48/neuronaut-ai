@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -103,12 +104,17 @@ delete: 'Delete account',
       'I have ideas but no plan',
       'I feel mostly clear',
     ],
-    q3: 'What worries you the most right now?',
-    chatPlaceholder: "Tell me what's troubling you…",
-    grounding: "I'm here. Take a breath. You're not alone in this.",
-    intro_work: "Alright {name}. Let's talk about what's happening with work.",
-    intro_finance: "Alright {name}. Let's unpack the financial stress together.",
-    intro_future: "Alright {name}. Let's get clarity on your direction.",
+   q3: 'What do you want to fix today?',
+
+    chatPlaceholder: "Example: I need a better job fast",
+
+    grounding: "Good. Let’s solve this together.",
+
+    intro_work: "Tell me the problem. I’ll build your action plan.",
+
+  intro_finance: "Show me the numbers. Let’s fix this step by step.",
+intro_future: "Let’s design your next move together.",
+
     calmNote: 'Not here to fix your life. Here to help you see your next steps.If you don’t see notes, sign in and restart. They’ll appear next time.',
   },
   pt: {
@@ -157,12 +163,17 @@ delete: 'Excluir conta',
       'Tenho ideias, mas sem plano',
       'Relativamente claro',
     ],
-    q3: 'O que mais te preocupa agora?',
-    chatPlaceholder: 'Conte o que está te preocupando…',
-    grounding: 'Estou aqui. Respire. Você não está sozinho.',
-    intro_work: 'Certo, {name}. Vamos falar sobre o trabalho.',
-    intro_finance: 'Certo, {name}. Vamos falar sobre as finanças.',
-    intro_future: 'Certo, {name}. Vamos clarear o futuro.',
+   q3: 'O que você quer resolver hoje?',
+
+    chatPlaceholder: "Exemplo: preciso de um emprego melhor rápido",
+
+    grounding: "Beleza. Vamos resolver isso juntos.",
+
+   intro_work: "Me diga o problema. Vou montar seu plano de ação.",
+
+    intro_finance: "Me mostra os números. Vamos resolver isso passo a passo.",
+intro_future: "Vamos planejar seu próximo passo juntos.",
+
     calmNote: 'Não é para consertar sua vida. É para ajudar você a enxergar os próximos passos.Não está vendo as anotações? Faça login e reinicie. Elas aparecem na próxima vez que você voltar. Faça isso agora!',
   },
   es: {
@@ -211,12 +222,18 @@ delete: 'Eliminar cuenta',
       'Ideas sin plan',
       'Bastante claro',
     ],
-    q3: '¿Qué es lo que más te preocupa?',
-    chatPlaceholder: 'Cuéntame qué te preocupa…',
-    grounding: 'Estoy aquí. Respira. No estás solo.',
-    intro_work: 'Bien, {name}. Hablemos del trabajo.',
-    intro_finance: 'Bien, {name}. Hablemos de las finanzas.',
-    intro_future: 'Bien, {name}. Aclaremos tu camino.',
+ q3: '¿Qué quieres resolver hoy?',
+
+    chatPlaceholder: "Ejemplo: necesito un mejor trabajo rápido",
+
+    grounding: "Bien. Vamos a resolver esto juntos.",
+
+    intro_work: "Dime el problema. Crearé tu plan de acción.",
+
+ intro_finance: "Muéstrame los números. Vamos resolver esto paso a paso.",
+intro_future: "Vamos a diseñar tu próximo paso juntos.",
+
+
     calmNote: 'No está aquí para arreglar tu vida. Está aquí para ayudarte a ver tus próximos pasos.Si no ves notas, inicia sesión y reinicia. Aparecerán la próxima vez que vuelvas. Hazlo ahora.',
   },
   fr: {
@@ -265,17 +282,23 @@ delete: 'Supprimer le compte',
       'Des idées sans plan',
       'Assez claire',
     ],
-    q3: "Qu'est-ce qui vous inquiète le plus ?",
-    chatPlaceholder: 'Dites-moi ce qui vous préoccupe…',
-    grounding: "Je suis là. Respirez. Vous n'êtes pas seul.",
-    intro_work: "D'accord {name}. Parlons du travail.",
-    intro_finance: "D'accord {name}. Parlons des finances.",
-    intro_future: "D'accord {name}. Clarifions votre direction.",
+    q3: 'Que veux-tu résoudre aujourd’hui ?',
+
+    chatPlaceholder: "Exemple : j’ai besoin d’un meilleur emploi rapidement",
+
+    grounding: "Bien. Résolvons ça ensemble.",
+
+    intro_work: "Dis-moi le problème. Je crée ton plan d’action.",
+
+  intro_finance: "Montre-moi les chiffres. On va régler ça étape par étape.",
+intro_future: "Construisons ensemble ta prochaine étape.",
+
     calmNote: 'Pas ici pour réparer votre vie. Ici pour vous aider à voir les prochaines étapes.Si vous ne voyez pas de notes, connectez-vous et recommencez. Elles apparaîtront lors de votre prochaine visite. Connectez-vous quand vous le souhaitez.',
   },
 };
 
 const TERMS_VERSION = '2026-01-02';
+
 
 /* ================= COMPONENT ================= */
 export default function DashboardClientNotes() {

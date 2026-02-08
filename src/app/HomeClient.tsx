@@ -9,23 +9,31 @@ const SUPPORT_COPY: Record<
   Lang,
   { main: string; signin: string; guest: string }
 > = {
-  pt: {
-    main: 'Para tudo existe um caminho. Estamos com você.',
-    signin: 'Entrar',
-    guest: 'Continuar como convidado',
-  },
+
+  /* 🇺🇸 EN */
   en: {
-    main: "You don’t have to go through this alone",
+    main: 'Clarity starts here.',
     signin: 'Sign in',
     guest: 'Continue as guest',
   },
-  es: {
-    main: 'Para todo hay un camino. Estamos contigo.',
-    signin: 'Iniciar sesión',
-    guest: 'Entrar como invitado',
+
+  /* 🇧🇷 PT (natural Brazilian) */
+  pt: {
+    main: 'A clareza começa aqui.',
+    signin: 'Entrar',
+    guest: 'Continuar como convidado',
   },
+
+  /* 🇪🇸 ES */
+  es: {
+    main: 'La claridad empieza aquí.',
+    signin: 'Iniciar sesión',
+    guest: 'Continuar como invitado',
+  },
+
+  /* 🇫🇷 FR */
   fr: {
-    main: 'Il existe toujours une voie. Nous sommes avec vous.',
+    main: 'La clarté commence ici.',
     signin: 'Connexion',
     guest: 'Continuer en invité',
   },
