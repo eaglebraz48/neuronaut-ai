@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,7 +8,8 @@ import DisclaimerModal from '@/components/DisclaimerModal';
 /* ================= TYPES ================= */
 type Lang = 'en' | 'es' | 'pt' | 'fr';
 type Phase = 'confirming' | 'profile' | 'guided' | 'chat';
-type Reason = 'work' | 'finance' | 'future' | null;
+type Reason = 'work' | 'finance' | 'future' | 'other' | null;
+
 type Pronoun = 'neutral' | 'they' | 'he' | 'she' | null;
 
 type ChatMessage = {
@@ -18,282 +18,337 @@ type ChatMessage = {
 };
 
 type CopySchema = {
+voiceOn: string;
+voiceOff: string;
+voiceTurnOn: string;
+voiceTurnOff: string;
+
   listening: string;
   back: string;
   guest: string;
   signin: string;
   signout: string;
-delete: string;  // ← ADD THIS LINE
+  delete: string;
+
   confirmTitle: string;
   confirmBtn: string;
+
   nameTitle: string;
   namePlaceholder: string;
+
   pronounNeutral: string;
   pronounThey: string;
   pronounHe: string;
   pronounShe: string;
+
   startTalking: string;
   send: string;
   typing: string;
+
   notesTitle: string;
   notesEmpty: string;
+
   q1: string;
   q1_work: string;
   q1_finance: string;
   q1_future: string;
+  q1_other: string;
+
   q2_work: string;
+  q2_other: string;
   q2_work_opts: string[];
+
   q2_finance: string;
   q2_finance_opts: string[];
+
   q2_future: string;
   q2_future_opts: string[];
+
   q3: string;
   chatPlaceholder: string;
+
   grounding: string;
   intro_work: string;
   intro_finance: string;
   intro_future: string;
+
   calmNote: string;
 };
 
 /* ================= COPY ================= */
 const COPY: Record<Lang, CopySchema> = {
+
+  /* ================= EN ================= */
   en: {
-    listening: 'Agent AI · Listening',
+    voiceOn: '🔊 Voice On',
+voiceOff: '🔇 Voice Off',
+voiceTurnOn: 'turn on',
+voiceTurnOff: 'turn off',
+
+listening: 'Agent AI · Listening',
     back: 'Back to start',
     guest: 'Guest mode',
     signin: 'Sign in',
     signout: 'Sign out',
+    delete: 'Delete account',
+
     confirmTitle: 'Welcome',
     confirmBtn: 'Enter',
+
     nameTitle: 'How should I address you?',
     namePlaceholder: 'Your name',
+
     pronounNeutral: 'Use neutral language',
     pronounThey: 'They / them',
     pronounHe: 'He / him',
     pronounShe: 'She / her',
+
     startTalking: 'Start typing',
     send: 'Send',
     typing: 'typing…',
+
     notesTitle: 'Working Notes',
     notesEmpty: '(waiting for conversation…)',
-delete: 'Delete account',
 
-    q1: 'Are you here mainly because of:',
-    q1_work: 'Work or job uncertainty',
-    q1_finance: 'Financial stress',
-    q1_future: 'Thinking about my future direction',
-    q2_work: 'What best describes your work situation right now?',
+    q1: 'What do you want help with today?',
+    q1_work: 'Work or job',
+    q1_finance: 'Money or finances',
+    q1_future: 'Future direction',
+    q1_other: 'Something else',
+
+    q2_work: 'What best describes your work situation?',
+    q2_other: 'Tell me what’s going on. I’m listening.',
     q2_work_opts: [
       'I may lose my job',
       'I already lost my job',
-      "I'm stuck but employed",
-      "I'm working but anxious",
+      'Stuck but employed',
+      'Working but stressed',
     ],
-    q2_finance: 'How would you describe your financial situation?',
+
+    q2_finance: 'How are your finances right now?',
     q2_finance_opts: [
-      'Living paycheck to paycheck',
+      'Paycheck to paycheck',
       'Missing payments',
       'Stable but worried',
       'Uncertain income',
     ],
-    q2_future: 'How clear do you feel about your direction right now?',
+
+    q2_future: 'How clear is your direction?',
     q2_future_opts: [
       'Very unclear',
       'Somewhat unclear',
-      'I have ideas but no plan',
-      'I feel mostly clear',
+      'Ideas but no plan',
+      'Mostly clear',
     ],
-   q3: 'What do you want to fix today?',
 
-    chatPlaceholder: "Example: I need a better job fast",
+    q3: 'What do you want to fix today?',
+    chatPlaceholder: 'Example: I need a better job fast',
 
-    grounding: "Good. Let’s solve this together.",
+    grounding: 'Good. Let’s solve this together.',
 
-    intro_work: "Tell me the problem. I’ll build your action plan.",
+    intro_work: 'Tell me the problem. I’ll build your action plan.',
+    intro_finance: 'Show me the numbers. Let’s fix this step by step.',
+    intro_future: 'Let’s design your next move together.',
 
-  intro_finance: "Show me the numbers. Let’s fix this step by step.",
-intro_future: "Let’s design your next move together.",
-
-    calmNote: 'Not here to fix your life. Here to help you see your next steps.If you don’t see notes, sign in and restart. They’ll appear next time.',
+    calmNote: 'Clear thinking. Smart steps. Let’s move forward.',
   },
+
+
+  /* ================= PT ================= */
   pt: {
+voiceOn: '🔊 Voz ligada',
+voiceOff: '🔇 Voz desligada',
+voiceTurnOn: 'ligar',
+voiceTurnOff: 'desligar',
+
     listening: 'Agente AI · Ouvindo',
     back: 'Voltar ao início',
     guest: 'Modo convidado',
     signin: 'Entrar',
     signout: 'Sair',
+    delete: 'Excluir conta',
+
     confirmTitle: 'Bem-vindo',
     confirmBtn: 'Entrar',
-    nameTitle: 'Como devo me referir a você?',
+
+    nameTitle: 'Como devo te chamar?',
     namePlaceholder: 'Seu nome',
+
     pronounNeutral: 'Linguagem neutra',
     pronounThey: 'They / them',
     pronounHe: 'Ele / dele',
     pronounShe: 'Ela / dela',
+
     startTalking: 'Comece a digitar',
     send: 'Enviar',
     typing: 'digitando…',
+
     notesTitle: 'Anotações',
     notesEmpty: '(aguardando conversa…)',
-delete: 'Excluir conta',
 
-    q1: 'Você está aqui principalmente por:',
-    q1_work: 'Incerteza no trabalho',
-    q1_finance: 'Estresse financeiro',
-    q1_future: 'Pensando no meu futuro',
-    q2_work: 'Como está sua situação profissional agora?',
+    q1: 'O que você quer resolver hoje?',
+    q1_work: 'Trabalho',
+    q1_finance: 'Dinheiro ou finanças',
+    q1_future: 'Direção do futuro',
+    q1_other: 'Outra coisa',
+
+    q2_work: 'Como está sua situação profissional?',
+    q2_other: 'Me conta o que está acontecendo. Estou ouvindo.',
     q2_work_opts: [
-      'Posso perder meu emprego',
-      'Já perdi meu emprego',
-      'Estou empregado, mas travado',
-      'Trabalho com ansiedade',
+      'Posso perder o emprego',
+      'Já perdi o emprego',
+      'Empregado mas travado',
+      'Trabalhando com estresse',
     ],
-    q2_finance: 'Como está sua situação financeira?',
+
+    q2_finance: 'Como estão suas finanças?',
     q2_finance_opts: [
       'Vivendo mês a mês',
-      'Atrasando contas',
-      'Estável, mas preocupado',
+      'Contas atrasadas',
+      'Estável mas preocupado',
       'Renda incerta',
     ],
-    q2_future: 'O quão claro está seu caminho agora?',
+
+    q2_future: 'Quão claro está seu caminho?',
     q2_future_opts: [
       'Nada claro',
       'Pouco claro',
-      'Tenho ideias, mas sem plano',
+      'Ideias sem plano',
       'Relativamente claro',
     ],
-   q3: 'O que você quer resolver hoje?',
 
-    chatPlaceholder: "Exemplo: preciso de um emprego melhor rápido",
+    q3: 'O que você quer consertar hoje?',
+    chatPlaceholder: 'Exemplo: preciso de um emprego melhor rápido',
 
-    grounding: "Beleza. Vamos resolver isso juntos.",
+    grounding: 'Beleza. Vamos resolver isso juntos.',
 
-   intro_work: "Me diga o problema. Vou montar seu plano de ação.",
+    intro_work: 'Me diga o problema. Vou montar seu plano de ação.',
+    intro_finance: 'Me mostra os números. Vamos resolver passo a passo.',
+    intro_future: 'Vamos planejar seu próximo passo juntos.',
 
-    intro_finance: "Me mostra os números. Vamos resolver isso passo a passo.",
-intro_future: "Vamos planejar seu próximo passo juntos.",
-
-    calmNote: 'Não é para consertar sua vida. É para ajudar você a enxergar os próximos passos.Não está vendo as anotações? Faça login e reinicie. Elas aparecem na próxima vez que você voltar. Faça isso agora!',
+    calmNote: 'Clareza. Próximos passos inteligentes. Vamos avançar.',
   },
+
+
+  /* ================= ES ================= */
   es: {
+voiceOn: '🔊 Voz activada',
+voiceOff: '🔇 Voz desactivada',
+voiceTurnOn: 'encender',
+voiceTurnOff: 'apagar',
+
     listening: 'Agente AI · Escuchando',
-    back: 'Volver al inicio',
-    guest: 'Modo invitado',
+    back: 'Volver',
+    guest: 'Empezar ahora (sin cuenta)',
     signin: 'Iniciar sesión',
     signout: 'Cerrar sesión',
+    delete: 'Eliminar cuenta',
+
     confirmTitle: 'Bienvenido',
     confirmBtn: 'Entrar',
-    nameTitle: '¿Cómo debo llamarte?',
+
+    nameTitle: '¿Cómo te llamo?',
     namePlaceholder: 'Tu nombre',
-    pronounNeutral: 'Lenguaje neutral',
+
+    pronounNeutral: 'Neutral',
     pronounThey: 'They / them',
-    pronounHe: 'Él / lo',
-    pronounShe: 'Ella / la',
+    pronounHe: 'Él',
+    pronounShe: 'Ella',
+
     startTalking: 'Empieza a escribir',
     send: 'Enviar',
     typing: 'escribiendo…',
+
     notesTitle: 'Notas',
     notesEmpty: '(esperando conversación…)',
-delete: 'Eliminar cuenta',
 
-    q1: '¿Estás aquí principalmente por:',
-    q1_work: 'Incertidumbre laboral',
-    q1_finance: 'Estrés financiero',
-    q1_future: 'Pensando en mi futuro',
-    q2_work: '¿Cómo describirías tu situación laboral?',
-    q2_work_opts: [
-      'Puedo perder mi trabajo',
-      'Ya perdí mi trabajo',
-      'Empleado pero estancado',
-      'Trabajo con ansiedad',
-    ],
-    q2_finance: '¿Cómo está tu situación financiera?',
-    q2_finance_opts: [
-      'Viviendo al día',
-      'Pagos atrasados',
-      'Estable pero preocupado',
-      'Ingresos inciertos',
-    ],
-    q2_future: '¿Qué tan claro ves tu camino?',
-    q2_future_opts: [
-      'Nada claro',
-      'Algo confuso',
-      'Ideas sin plan',
-      'Bastante claro',
-    ],
- q3: '¿Qué quieres resolver hoy?',
+    q1: '¿Qué tienes en mente hoy?',
+    q1_work: 'Trabajo',
+    q1_finance: 'Dinero',
+    q1_future: 'Mi futuro',
+    q1_other: 'Otra cosa',
 
-    chatPlaceholder: "Ejemplo: necesito un mejor trabajo rápido",
+    q2_work: '¿Cómo te sientes con el trabajo?',
+    q2_other: 'Cuéntame. Te escucho.',
+    q2_work_opts: ['Puedo perderlo', 'Ya lo perdí', 'Estancado', 'Estresado'],
 
-    grounding: "Bien. Vamos a resolver esto juntos.",
+    q2_finance: '¿Y el dinero?',
+    q2_finance_opts: ['Muy justo', 'Atrasado', 'Estable pero preocupado', 'Inestable'],
 
-    intro_work: "Dime el problema. Crearé tu plan de acción.",
+    q2_future: '¿Tu camino se siente claro?',
+    q2_future_opts: ['Nada claro', 'Confuso', 'Ideas sin plan', 'Bastante claro'],
 
- intro_finance: "Muéstrame los números. Vamos resolver esto paso a paso.",
-intro_future: "Vamos a diseñar tu próximo paso juntos.",
+    q3: '¿En qué te ayudo hoy?',
+    chatPlaceholder: 'Escribe con normalidad…',
 
+    grounding: 'Bien. Lo resolvemos juntos.',
 
-    calmNote: 'No está aquí para arreglar tu vida. Está aquí para ayudarte a ver tus próximos pasos.Si no ves notas, inicia sesión y reinicia. Aparecerán la próxima vez que vuelvas. Hazlo ahora.',
+    intro_work: 'Cuéntame qué pasa.',
+    intro_finance: 'Veamos esto con calma.',
+    intro_future: 'Planeemos tu siguiente paso.',
+
+    calmNote: 'Aquí para ayudarte, nada más.',
   },
+
+
+  /* ================= FR ================= */
   fr: {
-    listening: "Agent AI · À l'écoute",
-    back: 'Retour au début',
-    guest: 'Mode invité',
+voiceOn: '🔊 Voix activée',
+voiceOff: '🔇 Voix désactivée',
+voiceTurnOn: 'activer',
+voiceTurnOff: 'désactiver',
+
+    listening: 'Agent AI · À l’écoute',
+    back: 'Retour',
+    guest: 'Commencer maintenant (sans compte)',
     signin: 'Connexion',
     signout: 'Déconnexion',
+    delete: 'Supprimer le compte',
+
     confirmTitle: 'Bienvenue',
     confirmBtn: 'Entrer',
-    nameTitle: "Comment dois-je m'adresser à vous ?",
-    namePlaceholder: 'Votre nom',
-    pronounNeutral: 'Langage neutre',
+
+    nameTitle: 'Comment dois-je t’appeler ?',
+    namePlaceholder: 'Ton prénom',
+
+    pronounNeutral: 'Neutre',
     pronounThey: 'They / them',
-    pronounHe: 'Il / lui',
-    pronounShe: 'Elle / elle',
+    pronounHe: 'Il',
+    pronounShe: 'Elle',
+
     startTalking: 'Commence à écrire',
     send: 'Envoyer',
     typing: 'écrit…',
+
     notesTitle: 'Notes',
-    notesEmpty: '(en attente de la conversation…)',
-delete: 'Supprimer le compte',
+    notesEmpty: '(en attente…)',
 
-    q1: 'Êtes-vous ici principalement pour :',
-    q1_work: 'Incertitude professionnelle',
-    q1_finance: 'Stress financier',
-    q1_future: "Réflexion sur l'avenir",
-    q2_work: 'Quelle est votre situation professionnelle actuelle ?',
-    q2_work_opts: [
-      'Je risque de perdre mon emploi',
-      "J'ai déjà perdu mon emploi",
-      'Employé mais bloqué',
-      'Je travaille avec anxiété',
-    ],
-    q2_finance: 'Comment est votre situation financière ?',
-    q2_finance_opts: [
-      'Je vis au jour le jour',
-      'Paiements manqués',
-      'Stable mais inquiet',
-      'Revenus incertains',
-    ],
-    q2_future: 'Votre direction vous semble-t-elle claire ?',
-    q2_future_opts: [
-      'Pas du tout claire',
-      'Plutôt floue',
-      'Des idées sans plan',
-      'Assez claire',
-    ],
-    q3: 'Que veux-tu résoudre aujourd’hui ?',
+    q1: 'Qu’as-tu en tête aujourd’hui ?',
+    q1_work: 'Travail',
+    q1_finance: 'Argent',
+    q1_future: 'Mon avenir',
+    q1_other: 'Autre chose',
 
-    chatPlaceholder: "Exemple : j’ai besoin d’un meilleur emploi rapidement",
+    q2_work: 'Comment te sens-tu au travail ?',
+    q2_other: 'Dis-moi. Je t’écoute.',
+    q2_work_opts: ['Risque de le perdre', 'Déjà perdu', 'Bloqué', 'Stressé'],
 
-    grounding: "Bien. Résolvons ça ensemble.",
+    q2_finance: 'Et côté argent ?',
+    q2_finance_opts: ['Très serré', 'Retards de paiement', 'Stable mais inquiet', 'Instable'],
 
-    intro_work: "Dis-moi le problème. Je crée ton plan d’action.",
+    q2_future: 'Ton chemin est clair ?',
+    q2_future_opts: ['Pas clair', 'Confus', 'Idées sans plan', 'Plutôt clair'],
 
-  intro_finance: "Montre-moi les chiffres. On va régler ça étape par étape.",
-intro_future: "Construisons ensemble ta prochaine étape.",
+    q3: 'Comment puis-je aider ?',
+    chatPlaceholder: 'Parle normalement…',
 
-    calmNote: 'Pas ici pour réparer votre vie. Ici pour vous aider à voir les prochaines étapes.Si vous ne voyez pas de notes, connectez-vous et recommencez. Elles apparaîtront lors de votre prochaine visite. Connectez-vous quand vous le souhaitez.',
+    grounding: 'D’accord. On avance ensemble.',
+
+    intro_work: 'Raconte-moi.',
+    intro_finance: 'Regardons ça calmement.',
+    intro_future: 'Construisons la suite.',
+
+    calmNote: 'Simplement là pour t’aider.',
   },
 };
 
@@ -306,6 +361,7 @@ export default function DashboardClientNotes() {
   const router = useRouter();
   const lang = (sp.get('lang') as Lang) || 'en';
   const T = COPY[lang];
+
 
   const [phase, setPhase] = useState<Phase>('confirming');
   const [reason, setReason] = useState<Reason>(null);
@@ -341,6 +397,7 @@ const speak = (text: string) => {
 
   const [pronoun, setPronoun] = useState<Pronoun>(null);
   const [inputValue, setInputValue] = useState('');
+const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
@@ -596,22 +653,35 @@ const handleSend = async () => {
   setIsLoading(true);
 
   try {
-    const res = await fetch('/api/agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: [...messages, userMsg],
-        context: {
-          name,
-          pronoun,
-          reason,
-          lang,
-          userId, //ADD THIS LINE
-          country, 
-          mode: 'conversation',
-        },
-      }),
-    });
+    const form = new FormData();
+
+form.append(
+  'messages',
+  JSON.stringify([...messages, userMsg])
+);
+
+form.append(
+  'context',
+  JSON.stringify({
+    name,
+    pronoun,
+    reason,
+    lang,
+    userId,
+    country,
+    mode: 'conversation',
+  })
+);
+
+/* se tiver imagem selecionada */
+if (selectedImage) {
+  form.append('image', selectedImage);
+}
+
+const res = await fetch('/api/agent', {
+  method: 'POST',
+  body: form,
+});
 
     const data = await res.json();
 
@@ -652,9 +722,11 @@ setAiReplyCount(c => {
 
   } catch (error) {
     console.error('Error sending message:', error);
-  } finally {
-    setIsLoading(false);
-  }
+ } finally {
+  setIsLoading(false);
+  setSelectedImage(null); // ← CLEAR uploaded file after send
+}
+
 };
 
 
@@ -668,447 +740,355 @@ setAiReplyCount(c => {
 const isReviewer = sp.get('reviewer') === '1';
 
   return (
-    <>
-      {showDisclaimer && (
-        <DisclaimerModal 
-          termsVersion={TERMS_VERSION}
-          persistence="none"
-          onAccept={handleDisclaimerAccept}
-          onDecline={() => router.push(`/?lang=${lang}`)}
-        />
-      )}
-
-      <div style={page}>
-        <div className="ghost-symbol" style={ghostSymbol} />
-
-        <div style={aiOrbWrap}>
-          <div style={{ ...aiOrb, ...pulse }} />
-        </div>
-
-        <div style={notesAuthBar} className="notes-auth-mobile">
-       
-          <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
-            {(['en', 'pt', 'es', 'fr'] as Lang[]).map(l => (
-              <button
-                key={l}
-                onClick={() => router.push(`/dashboard?lang=${l}`)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  border: '1px solid rgba(122,162,255,0.4)',
-                  background: l === lang ? '#7aa2ff' : 'transparent',
-                  color: l === lang ? '#000' : '#7aa2ff',
-                  cursor: 'pointer',
-                }}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
-          </div>
-
-          <button onClick={() => router.push(`/?lang=${lang}`)} style={linkBtn}>
-            {T.back}
-          </button>
-<button
-  onClick={() => setVoiceOn(v => !v)}
-  style={linkBtn}
->
-  {voiceOn ? '🔊 Voice On' : '🔇 Voice Off'}
-</button>
-
-         {userEmail ? (
   <>
-<button
-  onClick={handleSignOut}
-  style={signOutBtn}
-  className="auth-btn-mobile"
->
-  {T.signout}
-</button>
+    {showDisclaimer && (
+      <DisclaimerModal
+        termsVersion={TERMS_VERSION}
+        persistence="none"
+        onAccept={handleDisclaimerAccept}
+        onDecline={() => router.push(`/?lang=${lang}`)}
+      />
+    )}
 
-<button
-  onClick={handleDelete}
-  style={{
-    ...signOutBtn,
-    background: '#6b7280',
-  }}
-  className="auth-btn-mobile"
->
-  {T.delete}
-</button>
+    <div style={page}>
+      <div className="ghost-symbol" style={ghostSymbol} />
 
-  </>
-) : (
-  <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
-    {T.signin}
-  </button>
-)}
+      <div style={aiOrbWrap}>
+        <div style={{ ...aiOrb, ...pulse }} />
+      </div>
 
-    </div>
-                    {phase !== 'confirming' && (
-          <div style={label}>
-            <div>NEURONAUT</div>
-            <div style={{ opacity: 0.6 }}>{T.listening}</div>
-            {isGuest && <div style={{ color: '#7aa2ff' }}>{T.guest}</div>}
-          </div>
-        )}
-
-        {phase === 'confirming' && userEmail && (
-          <div style={confirmBox}>
-            <div style={{ opacity: 0.85 }}>{T.confirmTitle}</div>
-            <div style={{ color: '#7aa2ff', margin: '6px 0 14px' }}>{userEmail}</div>
-            <button style={primaryBtn} onClick={() => setPhase('profile')}>
-              {T.confirmBtn}
-            </button>
-          </div>
-        )}
-
-        {phase === 'profile' && (
-          <div style={questionBox}>
-            <div style={question} className="question-text-mobile">{T.nameTitle}</div>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={T.namePlaceholder}
-              style={nameInput}
-            />
-<input
-  value={country}
-  onChange={(e) => setCountry(e.target.value)}
-  placeholder="Your country"
-  style={{ ...nameInput, marginTop: 8 }}
-/>
-            <div style={{ marginTop: 12 }}>
-              <button
-                style={pronoun === 'neutral' ? optBtnActive : optBtn}
-                onClick={() => setPronoun('neutral')}
-              >
-                {T.pronounNeutral}
-              </button>
-              <button
-                style={pronoun === 'they' ? optBtnActive : optBtn}
-                onClick={() => setPronoun('they')}
-              >
-                {T.pronounThey}
-              </button>
-              <button
-                style={pronoun === 'he' ? optBtnActive : optBtn}
-                onClick={() => setPronoun('he')}
-              >
-                {T.pronounHe}
-              </button>
-              <button
-                style={pronoun === 'she' ? optBtnActive : optBtn}
-                onClick={() => setPronoun('she')}
-              >
-                {T.pronounShe}
-              </button>
-            </div>
-
+      <div style={notesAuthBar} className="notes-auth-mobile">
+        <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
+          {(['en', 'pt', 'es', 'fr'] as Lang[]).map((l) => (
             <button
-              style={{ 
-                ...primaryBtn, 
-                marginTop: 16,
-                opacity: (!name || !pronoun || !hasAcceptedTerms) ? 0.5 : 1,
-                cursor: (!name || !pronoun || !hasAcceptedTerms) ? 'not-allowed' : 'pointer'
-              }}
-              disabled={!name || !pronoun || !hasAcceptedTerms}
-              onClick={() => setPhase('guided')}
-            >
-              {T.startTalking}
-            </button>
-          </div>
-        )}
-
-        {phase === 'guided' && (
-          <div style={questionBox}>
-            {step === 1 && (
-              <>
-                <div style={question} className="question-text-mobile">{T.q1}</div>
-                <button
-                  style={optBtn}
-                  onClick={() => {
-                    setReason('work');
-                    setStep(2);
-                  }}
-                >
-                  {T.q1_work}
-                </button>
-                <button
-                  style={optBtn}
-                  onClick={() => {
-                    setReason('finance');
-                    setStep(2);
-                  }}
-                >
-                  {T.q1_finance}
-                </button>
-                <button
-                  style={optBtn}
-                  onClick={() => {
-                    setReason('future');
-                    setStep(2);
-                  }}
-                >
-                  {T.q1_future}
-                </button>
-              </>
-            )}
-
-            {step === 2 && reason && (
-              <>
-                <div style={question} className="question-text-mobile">{T[`q2_${reason}` as keyof typeof T]}</div>
-                {(T[`q2_${reason}_opts` as keyof typeof T] as string[]).map((o) => (
-                  <button key={o} style={optBtn} onClick={() => setStep(3)}>
-                    {o}
-                  </button>
-                ))}
-              </>
-            )}
-
-            {step === 3 && (
-              <>
-                <div style={{ color: '#1E2A5A', marginBottom: 12, fontWeight: 600 }}>{T.grounding}</div>
-                <div style={question} className="question-text-mobile">{T.q3}</div>
-                <button
-                  style={primaryBtn}
-                  onClick={() => {
-                    const intro =
-                      reason === 'work'
-                        ? T.intro_work.replace('{name}', name)
-                        : reason === 'finance'
-                        ? T.intro_finance.replace('{name}', name)
-                        : T.intro_future.replace('{name}', name);
-
-                  setMessages([{ role: 'assistant', text: intro }]);
-speak(intro); // 🔥 welcome voice
-setPhase('chat');
-
-                  }}
-                >
-                  {T.startTalking}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {phase === 'chat' && (
-          <div style={chatWrapper}>
-            <div style={chatMessages}>
-              {messages.map((m, i) => (
-                <div 
-                  key={i} 
-                  style={m.role === 'assistant' ? aiMessage : userMessage}
-                  className={m.role === 'assistant' ? 'ai-message-mobile' : 'user-message-mobile'}
-                >
-                  {m.text}
-                </div>
-              ))}
-              {isLoading && (
-                <div style={aiMessage}>
-                  <em>{T.typing}</em>
-                </div>
-              )}
-            </div>
-
-            <div style={chatBar}>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <input
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder={T.chatPlaceholder}
-                  style={chatInput}
-                  className="chat-input-mobile"
-                  disabled={isLoading}
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={isLoading || !inputValue.trim()}
-                  style={{
-                    ...primaryBtn,
-                    opacity: isLoading || !inputValue.trim() ? 0.5 : 1,
-                  }}
-                >
-                  {T.send}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div
-          style={{
-            position: 'fixed',
-            left: '38%',
-            top: 120,
-            width: 280,
-    maxHeight: 320,      // 👈 ADD
-    overflowY: 'auto',   // 👈 ADD
-            borderRadius: 18,
-            background: '#F3F4FF',
-            border: '1px solid #D6D9FF',
-            color: '#2B2E5F',
-            padding: 16,
-            boxShadow: '0 20px 60px rgba(120,130,255,0.35)',
-            zIndex: 5,
-          }}
-        >
-          {/* HEADER */}
-          <div
-            onClick={() => setNotesOpen(v => !v)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              cursor: 'pointer',
-              userSelect: 'none',
-            }}
-          >
-            <strong>{T.notesTitle}</strong>
-            <span
+              key={l}
+              onClick={() => router.push(`/dashboard?lang=${l}`)}
               style={{
-                fontSize: 16,
-                opacity: 0.7,
-                transform: notesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s ease',
+                padding: '4px 8px',
+                borderRadius: 6,
+                fontSize: 12,
+                fontWeight: 600,
+                border: '1px solid rgba(122,162,255,0.4)',
+                background: l === lang ? '#7aa2ff' : 'transparent',
+                color: l === lang ? '#000' : '#7aa2ff',
+                cursor: 'pointer',
               }}
             >
-              ⌄
+              {l.toUpperCase()}
+            </button>
+          ))}
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+           <button onClick={() => setVoiceOn((v) => !v)} style={linkBtn}>
+  {voiceOn ? T.voiceOn : T.voiceOff}
+</button>
+
+
+            <span style={{ fontSize: 11, opacity: 0.7 }}>
+              {voiceOn ? T.voiceTurnOff : T.voiceTurnOn}
             </span>
           </div>
 
-          {/* BODY */}
-          {notesOpen && (
+          {userEmail ? (
             <>
-              {notes.length === 0 ? (
-                <span style={{ color: '#141a33', opacity: 0.9 }}>
-                  {T.notesEmpty}
-                </span>
-              ) : (
-                notes.map((n, i) => (
-                  <div key={i} style={{ marginBottom: 6 }}>
-                    • {n}
-                  </div>
-                ))
-              )}
+              <button onClick={handleSignOut} style={signOutBtn} className="auth-btn-mobile">
+                {T.signout}
+              </button>
+
+              <button
+                onClick={handleDelete}
+                style={{ ...signOutBtn, background: '#6b7280' }}
+                className="auth-btn-mobile"
+              >
+                {T.delete}
+              </button>
+            </>
+          ) : (
+            <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
+              {T.signin}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {phase !== 'confirming' && (
+        <div style={label}>
+          <div>NEURONAUT</div>
+          <div style={{ opacity: 0.6 }}>{T.listening}</div>
+          {isGuest && <div style={{ color: '#7aa2ff' }}>{T.guest}</div>}
+        </div>
+      )}
+
+      {phase === 'confirming' && userEmail && (
+        <div style={confirmBox}>
+          <div style={{ opacity: 0.85 }}>{T.confirmTitle}</div>
+          <div style={{ color: '#7aa2ff', margin: '6px 0 14px' }}>{userEmail}</div>
+          <button style={primaryBtn} onClick={() => setPhase('profile')}>
+            {T.confirmBtn}
+          </button>
+        </div>
+      )}
+
+      {phase === 'profile' && (
+        <div style={questionBox}>
+          <div style={question} className="question-text-mobile">
+            {T.nameTitle}
+          </div>
+
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={T.namePlaceholder}
+            style={nameInput}
+          />
+
+          <input
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            placeholder="Your country"
+            style={{ ...nameInput, marginTop: 8 }}
+          />
+
+          <div style={{ marginTop: 12 }}>
+            <button
+              style={pronoun === 'neutral' ? optBtnActive : optBtn}
+              onClick={() => setPronoun('neutral')}
+            >
+              {T.pronounNeutral}
+            </button>
+
+            <button style={pronoun === 'they' ? optBtnActive : optBtn} onClick={() => setPronoun('they')}>
+              {T.pronounThey}
+            </button>
+
+            <button style={pronoun === 'he' ? optBtnActive : optBtn} onClick={() => setPronoun('he')}>
+              {T.pronounHe}
+            </button>
+
+            <button style={pronoun === 'she' ? optBtnActive : optBtn} onClick={() => setPronoun('she')}>
+              {T.pronounShe}
+            </button>
+          </div>
+
+          <button
+            style={{
+              ...primaryBtn,
+              marginTop: 16,
+              opacity: !name || !pronoun || !hasAcceptedTerms ? 0.5 : 1,
+              cursor: !name || !pronoun || !hasAcceptedTerms ? 'not-allowed' : 'pointer',
+            }}
+            disabled={!name || !pronoun || !hasAcceptedTerms}
+            onClick={() => setPhase('guided')}
+          >
+            {T.startTalking}
+          </button>
+        </div>
+      )}
+
+      {phase === 'guided' && (
+        <div style={questionBox}>
+          {step === 1 && (
+            <>
+              <div style={question} className="question-text-mobile">
+                {T.q1}
+              </div>
+
+              <button style={optBtn} onClick={() => { setReason('work'); setStep(2); }}>
+                {T.q1_work}
+              </button>
+
+              <button style={optBtn} onClick={() => { setReason('finance'); setStep(2); }}>
+                {T.q1_finance}
+              </button>
+
+              <button style={optBtn} onClick={() => { setReason('future'); setStep(2); }}>
+                {T.q1_future}
+              </button>
+            </>
+          )}
+
+          {step === 2 && reason && (
+            <>
+              <div style={question} className="question-text-mobile">
+                {T[`q2_${reason}` as keyof typeof T]}
+              </div>
+
+              {(T[`q2_${reason}_opts` as keyof typeof T] as string[]).map((o) => (
+                <button key={o} style={optBtn} onClick={() => setStep(3)}>
+                  {o}
+                </button>
+              ))}
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div style={{ color: '#1E2A5A', marginBottom: 12, fontWeight: 600 }}>{T.grounding}</div>
+
+              <div style={question} className="question-text-mobile">
+                {T.q3}
+              </div>
+
+              <button
+                style={primaryBtn}
+                onClick={() => {
+                  const intro =
+                    reason === 'work'
+                      ? T.intro_work.replace('{name}', name)
+                      : reason === 'finance'
+                      ? T.intro_finance.replace('{name}', name)
+                      : T.intro_future.replace('{name}', name)
+
+                  setMessages([{ role: 'assistant', text: intro }])
+                  speak(intro)
+                  setPhase('chat')
+                }}
+              >
+                {T.startTalking}
+              </button>
             </>
           )}
         </div>
+      )}
 
-        {showCalmNote && (
+      {phase === 'chat' && (
+        <div style={chatWrapper}>
+          {/* ================= MESSAGES ================= */}
+          <div style={chatMessages}>
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                style={m.role === 'assistant' ? aiMessage : userMessage}
+                className={m.role === 'assistant' ? 'ai-message-mobile' : 'user-message-mobile'}
+              >
+                {m.text}
+              </div>
+            ))}
+
+            {isLoading && (
+              <div style={aiMessage}>
+                <em>{T.typing}</em>
+              </div>
+            )}
+          </div>
+
+          {/* ================= INPUT BAR ================= */}
+          <div style={chatBar}>
+            <div className="chat-controls">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
+                style={{ marginBottom: 8 }}
+              />
+
+              <input
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder={T.chatPlaceholder}
+                style={chatInput}
+                disabled={isLoading}
+              />
+
+              <button
+                onClick={handleSend}
+                disabled={isLoading || (!inputValue.trim() && !selectedImage)}
+                style={{
+                  ...primaryBtn,
+                  width: '100%',
+                  marginTop: 8,
+                  opacity: isLoading ? 0.5 : 1,
+                }}
+              >
+                {T.send}
+              </button>
+            </div>
+          </div>
+
+          {/* ================= NOTES ================= */}
           <div
-            className="calm-note"
             style={{
               position: 'fixed',
               left: '38%',
-              top: notesOpen ? 360 : 320,
+              top: 120,
               width: 280,
-              borderRadius: 14,
-              background: 'rgba(15,21,51,0.95)',
-              border: '1px solid rgba(122,162,255,0.35)',
-              color: '#E5ECFF',
-              padding: 14,
-              boxShadow: '0 14px 40px rgba(92,124,250,0.35)',
+              maxHeight: 320,
+              overflowY: 'auto',
+              borderRadius: 18,
+              background: '#F3F4FF',
+              border: '1px solid #D6D9FF',
+              color: '#2B2E5F',
+              padding: 16,
+              boxShadow: '0 20px 60px rgba(120,130,255,0.35)',
               zIndex: 5,
             }}
           >
-            {T.calmNote}
+            <div
+              onClick={() => setNotesOpen((v) => !v)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+            >
+              <strong>{T.notesTitle}</strong>
+              <span
+                style={{
+                  fontSize: 16,
+                  opacity: 0.7,
+                  transform: notesOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease',
+                }}
+              >
+                ⌄
+              </span>
+            </div>
+
+            {notesOpen && (
+              <>
+                {notes.length === 0 ? (
+                  <span style={{ color: '#141a33', opacity: 0.9 }}>{T.notesEmpty}</span>
+                ) : (
+                  notes.map((n, i) => (
+                    <div key={i} style={{ marginBottom: 6 }}>
+                      • {n}
+                    </div>
+                  ))
+                )}
+              </>
+            )}
           </div>
-        )}
-        <style jsx global>{`
-          @media (min-width: 1024px) {
-            .ghost-symbol {
-              right: 18% !important;
-              top: 18% !important;
-            }
-          }
 
-          @media (max-width: 768px) {
-            .ghost-symbol {
-              right: 50% !important;
-              top: 58% !important;
-              transform: translate(50%, -50%) !important;
-              width: 420px;
-              height: 420px;
-              opacity: 0.18;
-            }
-
-            .calm-note {
-              left: 8px !important;
-              top: 240px !important;
-              max-width: 250px !important;
-              font-size: 15px !important;
-              line-height: 1.55 !important;
-              text-align: left !important;
-            }
-
-            .ai-message-mobile {
-              font-size: 16px !important;
-              line-height: 1.6 !important;
-            }
-
-            .user-message-mobile {
-              font-size: 16px !important;
-              line-height: 1.6 !important;
-            }
-
-            .chat-input-mobile {
-              font-size: 16px !important;
-            }
-
-            .question-text-mobile {
-              font-size: 16px !important;
-            }
-
-          }
-@media (max-width: 768px) {
-  .notes-auth-mobile {
-    position: fixed !important;
-    left: 8px !important;
-    right: 8px !important;
-    top: 60px !important;
-    display: flex !important;
-    flex-wrap: wrap !important;
-    justify-content: flex-start !important;
-    gap: 6px !important;
-    z-index: 6 !important;
-  }
-
-  .auth-btn-mobile {
-    font-size: 12px !important;
-    padding: 4px 8px !important;
-    border-radius: 6px !important;
-  }
-
- .notes-dropdown {
-  max-width: 92% !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  top: 140px !important;
-
+          {/* ================= CALM NOTE ================= */}
+          {showCalmNote && (
+            <div
+              className="calm-note"
+              style={{
+                position: 'fixed',
+                left: '38%',
+                top: notesOpen ? 360 : 320,
+                width: 280,
+                borderRadius: 14,
+                background: 'rgba(15,21,51,0.95)',
+                border: '1px solid rgba(122,162,255,0.35)',
+                color: '#E5ECFF',
+                padding: 14,
+                boxShadow: '0 14px 40px rgba(92,124,250,0.35)',
+                zIndex: 5,
+              }}
+            >
+              {T.calmNote}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  </>
+);
 }
-.notes-dropdown {
-  top: 200px !important;   /* antes estava 140 */
-  z-index: 9999 !important; /* força ficar acima */
-}
-
-.notes-content {
-  max-height: 420px !important; /* antes 300/350 */
-  overflow-y: auto !important;
-}
-
-}
-
-        `}</style>
-      </div>
-     </>
-    );
-}
-
 
 
 /* ================= STYLES ================= */
@@ -1318,7 +1298,10 @@ const chatInput: React.CSSProperties = {
   border: '1px solid rgba(122,162,255,0.35)',
   boxShadow: '0 0 0 2px rgba(122,162,255,0.45)',
   outline: 'none',
+
+  fontSize: 16,   // ✅ ADD THIS
 };
+
 
 const pulse = {
   animation: 'pulse 3.2s ease-in-out infinite',

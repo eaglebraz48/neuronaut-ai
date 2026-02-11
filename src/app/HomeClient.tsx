@@ -12,30 +12,30 @@ const SUPPORT_COPY: Record<
 
   /* 🇺🇸 EN */
   en: {
-    main: 'Clarity starts here.',
+    main: 'Feeling stuck? Neuronaut helps you think clearly.',
     signin: 'Sign in',
-    guest: 'Continue as guest',
+    guest: 'Start instantly (no account)',
   },
 
   /* 🇧🇷 PT (natural Brazilian) */
   pt: {
-    main: 'A clareza começa aqui.',
+    main: 'Se sentindo travado? O Neuronaut te ajuda a pensar com clareza.',
     signin: 'Entrar',
-    guest: 'Continuar como convidado',
+    guest: 'Começar agora (sem conta)',
   },
 
   /* 🇪🇸 ES */
   es: {
-    main: 'La claridad empieza aquí.',
+    main: '¿Te sientes estancado? Neuronaut te ayuda a pensar con claridad.',
     signin: 'Iniciar sesión',
-    guest: 'Continuar como invitado',
+    guest: 'Comenzar al instante (sin cuenta)',
   },
 
   /* 🇫🇷 FR */
   fr: {
-    main: 'La clarté commence ici.',
+    main: 'Vous vous sentez bloqué ? Neuronaut vous aide à penser clairement.',
     signin: 'Connexion',
-    guest: 'Continuer en invité',
+    guest: 'Démarrer instantanément (sans compte)',
   },
 };
 
@@ -93,7 +93,7 @@ export default function HomeClient() {
         </div>
       </div>
 
-      <div style={footer}>© 2025 Arison8, LLC · Neuronaut AI</div>
+      <div style={footer}>© 2026 Arison8, LLC · Neuronaut AI</div>
 
       <style jsx global>{`
         @keyframes slowPulse {

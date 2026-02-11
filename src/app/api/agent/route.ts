@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 
+/* ================= SETUP ================= */
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
@@ -11,7 +12,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-/* ================= BLOCKED PATTERNS ================= */
+/* ================= SAFETY ================= */
 const BLOCKED_PATTERNS = [
   'suicidal','suicide','kill myself','self harm',
   'eating disorder','anorexia','bulimia',
@@ -26,12 +27,13 @@ const BLOCKED_PATTERNS = [
   'rape','assault victim',
 ];
 
-/* ================= HELPERS ================= */
 function containsBlockedContent(text: string): boolean {
-  const lower = text.toLowerCase();
-  return BLOCKED_PATTERNS.some(term => lower.includes(term));
+  return BLOCKED_PATTERNS.some(term =>
+    text.toLowerCase().includes(term)
+  );
 }
 
+/* ================= LANGUAGE ================= */
 function detectLang(text: string): 'pt' | 'es' | 'fr' | 'en' {
   if (/[ãõçáéíóú]/i.test(text)) return 'pt';
   if (/[¿¡ñ]/i.test(text)) return 'es';
@@ -46,62 +48,117 @@ const LANG_NAMES: Record<string, string> = {
   fr: 'French',
 };
 
-/* ================= BASE SYSTEM PROMPT ================= */
-const BASE_SYSTEM_PROMPT = `
-You are NEURONAUT — the user's private AI strategist.
-
-MISSION:
-Help them solve everyday life, career, money, and personal decisions clearly and practically.
-
-
-STYLE:
-- Short replies (1–3 sentences max)
-- Talk like a smart, direct human — confident and practical
-- Never use numbered lists or bullet points
-- No step-by-step formatting
-- Speak conversationally and naturally
-- One clear suggestion at a time
-
-
-
-BEHAVIOR:
-- Give concrete next steps immediately
-- Suggest plans, not comfort
-- Speak like a sharp coach
-- Remove overthinking
-- If possible, give numbered steps (1–3)
-- You may help with general life questions (pets, relationships, habits, daily problems), but avoid medical, legal, or crisis topics
-
-
-RULES:
-- Always reply in the user's language
-- Never mention systems or databases
-- Avoid long emotional talk
-- Focus on solving the problem now
-`;
-
-/* ================= MEMORY FILTER ================= */
+/* ================= MEMORY ================= */
 function isMemorySafe(note: string): boolean {
-  const banned = [
-    'cannot access','can’t access','please provide','sorry',
-    'i can’t','i cannot','ask me','let me know'
-  ];
-
   const lower = note.toLowerCase();
-  if (banned.some(b => lower.includes(b))) return false;
-  if (lower.startsWith('research ') || lower.startsWith('consider ')) return false;
-
-  return true;
+  return !(lower.includes('sorry') || lower.includes('cannot'));
 }
 
-/* ================= API HANDLER ================= */
+/* ================= SYSTEM PROMPT ================= */
+const BASE_SYSTEM_PROMPT = `
+You are NEURONAUT.
+
+You think and act like a sharp, calm, grounded human analyst who verifies reality before speaking.
+
+CORE BEHAVIOR:
+You investigate FOR the user. The user does NOT investigate for you.
+
+If something needs checking:
+Ask the user to show you exactly what they see.
+
+Prefer:
+• screenshot
+• snipping tool capture
+• photo of the screen
+• pasted text
+
+Screenshots are safest and fastest.
+
+Only request file uploads if absolutely necessary.
+Never tell users to download, open, test, or inspect suspicious files themselves.
+Never send users to other websites to verify things.
+You do the analysis.
+
+WEB RULES:
+If web results are provided, treat them as real-time facts and use them confidently.
+Never say you cannot browse or verify.
+Never mention limitations.
+
+VERDICT RULE:
+When asked real vs fake, scam vs safe, or true vs false:
+You MUST give a clear conclusion:
+real, fake, misleading, or unverified.
+
+Be decisive. Do not hedge. Do not say “check elsewhere”.
+
+STYLE:
+Answer first.
+Then ONE simple next step only if needed.
+2–4 sentences max.
+Short. Direct. Conversational. Human.
+No lists. No lectures. No disclaimers. No “as an AI”.
+
+MISSION:
+Protect the user.
+Reduce confusion.
+Tell the truth clearly.
+Act like a trusted partner, not a help desk.
+`;
+
+
+/* ================= SEARCH ================= */
+async function braveSearch(query: string) {
+  const res = await fetch(
+    `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=6`,
+    {
+      headers: {
+        'X-Subscription-Token': process.env.BRAVE_API_KEY!,
+        Accept: 'application/json',
+      },
+    }
+  );
+
+  if (!res.ok) return [];
+
+  const data = await res.json();
+
+  return (
+    data.web?.results?.map((r: any) => ({
+      title: r.title,
+      url: r.url,
+      description: r.description,
+    })) || []
+  );
+}
+
+/* ================= API ================= */
 export async function POST(req: Request) {
   try {
-    const { messages, context } = await req.json();
+    let messages: any[] = [];
+    let context: any = {};
+    let imageBase64: string | null = null;
+
+    const contentType = req.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      const form = await req.formData();
+      const file = form.get('image') as File | null;
+
+      if (file) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        imageBase64 = buffer.toString('base64');
+      }
+
+      messages = JSON.parse((form.get('messages') as string) || '[]');
+      context = JSON.parse((form.get('context') as string) || '{}');
+    } else {
+      const body = await req.json();
+      messages = body.messages || [];
+      context = body.context || {};
+    }
 
     if (!Array.isArray(messages)) {
-    return NextResponse.json({ reply: 'Tell me the problem. I’ll build your action plan.' });
-
+      return NextResponse.json({ reply: 'Tell me what you saw.' });
     }
 
     const lastUserMsg =
@@ -109,204 +166,83 @@ export async function POST(req: Request) {
 
     if (containsBlockedContent(lastUserMsg)) {
       return NextResponse.json({
-        reply:
-          "I can’t help with crisis or harm topics. Let’s stay with work and direction.",
+        reply: 'I can’t help with harm or crisis topics. Let’s stay focused.',
       });
     }
-
-    /* ================= USER CONTEXT ================= */
 
     const lang = context?.lang || detectLang(lastUserMsg);
     const langName = LANG_NAMES[lang];
 
-    const userId = context?.userId || null;
-
-    const userName =
-      context?.name
-        ? context.name.charAt(0).toUpperCase() + context.name.slice(1)
-        : null;
-
-    const country =
-      context?.country?.trim() || null;
-
-    /* ================= FETCH NOTES ================= */
-
-    let pastNotesText = '';
-
-    if (userId) {
-      const { data } = await supabase
-        .from('working_notes')
-        .select('content')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(6);
-
-      if (data?.length) {
-        pastNotesText =
-          '\nPrevious context:\n' +
-          data.map(n => `- ${n.content}`).join('\n');
-      }
-    }
-
-    /* ================= BUILD SYSTEM MESSAGE ================= */
-
     const systemPrompt = `
 ${BASE_SYSTEM_PROMPT}
-
-${userName ? `The user's name is ${userName}. Address them naturally by name.` : ''}
-
-${
-  country
-    ? `
-The user lives in ${country}.
-Tailor all education, career, and financial advice specifically to that country.
-Mention local options when helpful.
-`
-    : `
-If country is unknown, politely ask once:
-"Which country are you in so I can tailor advice better?"
-Do not ask repeatedly after they answer.
-`
-}
-
-If local resources matter, you may ask for their city.
-Ask only when necessary, never upfront.
-
 Language: ${langName}
-
-${pastNotesText}
 `;
 
-   /* ================= MAIN CHAT ================= */
-/* ================= LANGUAGE SUGGESTION (SMART EARLY EXIT) ================= */
+    /* ================= INTENT + SEARCH ================= */
+    const FACT_INTENT =
+      /(real|fake|verify|fact|news|true|false|check|is this|did this|happened|proof|legit)/i;
 
-/* Detect preferred language based on country */
-function inferPreferredLang(
-  country: string | null,
-  detected: 'pt' | 'es' | 'fr' | 'en'
-): 'pt' | 'es' | 'fr' | 'en' {
+    let webResults: any[] = [];
 
-  if (!country) return detected;
+    if (FACT_INTENT.test(lastUserMsg) || lastUserMsg.length > 18) {
+      webResults = await braveSearch(lastUserMsg);
+    }
 
-  const c = country.toLowerCase();
+    /* ================= GPT INPUT ================= */
+    const gptMessages: any[] = [
+      { role: 'system', content: systemPrompt },
 
-  /* Portuguese */
-  const PT = [
-    'brazil','brasil','portugal','angola','mozambique','cape verde'
-  ];
+      ...(webResults.length
+        ? [{
+            role: 'system',
+            content:
+              'Verified web information:\n\n' +
+              webResults
+                .map(
+                  (r: any, i: number) =>
+                    `${i + 1}. ${r.title}\n${r.description}\n${r.url}`
+                )
+                .join('\n\n'),
+          }]
+        : []),
 
-  /* Spanish — ALL LATAM + Spain */
-  const ES = [
-    'mexico','argentina','colombia','chile','peru','uruguay','paraguay',
-    'bolivia','ecuador','venezuela','guatemala','honduras','panama',
-    'costa rica','nicaragua','el salvador','dominican republic','cuba',
-    'spain','españa'
-  ];
+      ...(imageBase64
+        ? [{
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Decide if this is real, fake, or misleading.' },
+              {
+                type: 'image_url',
+                image_url: { url: `data:image/jpeg;base64,${imageBase64}` },
+              },
+            ],
+          }]
+        : messages.map((m: any) => ({
+            role: m.role,
+            content: m.text,
+          }))),
+    ];
 
-  /* French */
-  const FR = [
-    'france','canada','quebec','haiti','belgium','switzerland',
-    'senegal','ivory coast','cameroon'
-  ];
-
-  if (PT.some(p => c.includes(p))) return 'pt';
-  if (ES.some(p => c.includes(p))) return 'es';
-  if (FR.some(p => c.includes(p))) return 'fr';
-
-  return detected;
-}
-
-
-/* Only suggest when country language ≠ selected UI language */
-function buildLanguageSuggestion(
-  name: string | null,
-  selectedLang: 'pt' | 'es' | 'fr' | 'en',
-  country: string | null
-): string | null {
-
-  const preferred = inferPreferredLang(country, selectedLang);
-
-  /* already matching → do nothing */
-  if (preferred === selectedLang) return null;
-
-  const first = name ? `Hi ${name}, ` : 'Hi, ';
-
-  const map: Record<string, string> = {
-    pt: `${first}vejo que você pode preferir português. Se mudar o idioma no topo da página, posso falar com você de forma mais pessoal.`,
-    es: `${first}parece que prefieres español. Cambia el idioma arriba y puedo ayudarte mejor.`,
-    fr: `${first}je vois que vous préférez le français. Changez la langue en haut pour une aide plus personnalisée.`,
-  };
-
-  return map[preferred] ?? null;
-}
-
-
-const suggestion = buildLanguageSuggestion(userName, lang, country);
-
-if (suggestion) {
-  return NextResponse.json({ reply: suggestion });
-}
-
-
-/* ================= NORMAL AI CHAT ================= */
-
-const chatResponse = await openai.chat.completions.create({
-  model: 'gpt-4o-mini',
-  messages: [
-    { role: 'system', content: systemPrompt },
-    ...messages.map((m: any) => ({
-      role: m.role,
-      content: m.text,
-    })),
-  ],
-});
-
-const reply =
-  chatResponse.choices[0]?.message?.content?.trim() ?? '';
-
-    /* ================= NOTE EXTRACTION ================= */
-
-    const NOTE_PROMPT = `
-Write ONE short working note.
-
-Rules:
-- ${langName}
-- 6–12 words
-- first person
-- no names
-- natural phrasing
-`;
-
-    const noteResponse = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      temperature: 0.1,
-      max_tokens: 40,
-      messages: [
-        { role: 'system', content: NOTE_PROMPT },
-        ...messages.slice(-6).map((m: any) => ({
-          role: m.role,
-          content: m.text,
-        })),
-        { role: 'assistant', content: reply },
-      ],
+      temperature: 0.4,
+      max_tokens: 160,
+      messages: gptMessages,
     });
 
-    const note =
-      noteResponse.choices[0]?.message?.content?.trim() ?? null;
+    const reply =
+      response.choices[0]?.message?.content?.trim() || '';
 
-    if (note && userId && isMemorySafe(note)) {
+    if (reply && context?.userId && isMemorySafe(reply)) {
       await supabase.from('working_notes').insert({
-        user_id: userId,
-        content: note,
+        user_id: context.userId,
+        content: reply.slice(0, 80),
       });
     }
 
-    return NextResponse.json({ reply, note });
-
+    return NextResponse.json({ reply });
   } catch (err) {
     console.error(err);
-    return NextResponse.json({
-      reply: 'Something went wrong. Try again.',
-    });
+    return NextResponse.json({ reply: 'Something went wrong. Try again.' });
   }
 }
