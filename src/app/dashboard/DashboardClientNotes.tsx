@@ -376,28 +376,25 @@ const [country, setCountry] = useState('');
 const [voiceOn, setVoiceOn] = useState(true);
 
 /* ================= VOICE ================= */
-const speak = (text: string) => {
+/* ================= VOICE (ELEVENLABS) ================= */
+const speak = async (text: string) => {
   if (!voiceOn) return;
 
-  window.speechSynthesis.cancel(); // prevent stacking
+  try {
+    const res = await fetch('/api/voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
 
-  const msg = new SpeechSynthesisUtterance(text);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
 
-  const voices = window.speechSynthesis.getVoices();
-
-  // 🔥 much more natural picks
-  const preferred =
-    voices.find(v => v.name.includes('Samantha')) ||   // macOS
-    voices.find(v => v.name.includes('Zira')) ||       // Windows
-    voices.find(v => v.name.includes('Google UK English Female')) ||
-    voices[0];
-
-  msg.voice = preferred;
-  msg.rate = 0.95;
-  msg.pitch = 1.05;
-  msg.volume = 1;
-
-  window.speechSynthesis.speak(msg);
+    const audio = new Audio(url);
+    audio.play();
+  } catch (err) {
+    console.error('voice error', err);
+  }
 };
 
   const [pronoun, setPronoun] = useState<Pronoun>(null);
