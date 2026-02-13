@@ -96,11 +96,26 @@ export default function HomeClient() {
       <div style={footer}>© 2026 Arison8, LLC · Neuronaut AI</div>
 
       <style jsx global>{`
-        @keyframes slowPulse {
-          0% { transform: scale(1); opacity: 0.9; }
-          50% { transform: scale(1.04); opacity: 1; }
-          100% { transform: scale(1); opacity: 0.9; }
-        }
+     @keyframes slowPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.95;
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.10);
+    opacity: 1;
+    filter: brightness(1.18);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0.95;
+    filter: brightness(1);
+  }
+}
+
 
         @keyframes fadeInHero {
           from { opacity: 0; transform: translateY(12px); }
@@ -128,7 +143,8 @@ const bg: React.CSSProperties = {
   backgroundImage: "url('/neuronaut-hero.png')",
   backgroundSize: 'cover',
   backgroundPosition: 'center',
-  animation: 'slowPulse 12s ease-in-out infinite',
+  animation: 'slowPulse 6s ease-in-out infinite',
+
 };
 
 const overlay: React.CSSProperties = {

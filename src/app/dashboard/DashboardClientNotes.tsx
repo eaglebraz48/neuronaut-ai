@@ -374,23 +374,28 @@ export default function DashboardClientNotes() {
   const [name, setName] = useState('');
 const [country, setCountry] = useState('');
 const [voiceOn, setVoiceOn] = useState(true);
+
 /* ================= VOICE ================= */
 const speak = (text: string) => {
-  if (!voiceOn) return; // 🔥 HARD STOP (voice disabled)
+  if (!voiceOn) return;
+
+  window.speechSynthesis.cancel(); // prevent stacking
 
   const msg = new SpeechSynthesisUtterance(text);
 
   const voices = window.speechSynthesis.getVoices();
 
-  const female =
-    voices.find(v =>
-      v.name.toLowerCase().includes('female') ||
-      v.name.toLowerCase().includes('zira') ||
-      v.name.toLowerCase().includes('samantha') ||
-      v.name.toLowerCase().includes('google us english')
-    ) || voices[0];
+  // 🔥 much more natural picks
+  const preferred =
+    voices.find(v => v.name.includes('Samantha')) ||   // macOS
+    voices.find(v => v.name.includes('Zira')) ||       // Windows
+    voices.find(v => v.name.includes('Google UK English Female')) ||
+    voices[0];
 
-  msg.voice = female;
+  msg.voice = preferred;
+  msg.rate = 0.95;
+  msg.pitch = 1.05;
+  msg.volume = 1;
 
   window.speechSynthesis.speak(msg);
 };
@@ -545,6 +550,7 @@ const handleDelete = async () => {
 // First useEffect - Check initial session on page load
 useEffect(() => {
   const initializeUser = async () => {
+
     try {
       const guest = localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
       if (guest) {
@@ -597,6 +603,25 @@ useEffect(() => {
   
   initializeUser();
 }, [sp]);
+
+/* ================= WELCOME VOICE ================= */
+useEffect(() => {
+  const played = sessionStorage.getItem('neuronaut_welcome');
+  if (played) return;
+
+  const welcomeMap: Record<Lang, string> = {
+    en: "Welcome to Newronaut. Your life changes today.",
+    pt: "Bem-vindo ao Neuronaut. Sua vida muda hoje.",
+    es: "Bienvenido a Neuronaút. Tu vida cambia hoy.",
+    fr: "Bienvenue sur Neuronaut. Votre vie change aujourd’hui."
+  };
+
+  setTimeout(() => {
+    speak(welcomeMap[lang]);
+  }, 800);
+
+  sessionStorage.setItem('neuronaut_welcome', '1');
+}, [lang, voiceOn]);
 
 // Second useEffect - Listen for auth state changes (magic link, sign in, sign out)
 useEffect(() => {
