@@ -602,23 +602,7 @@ useEffect(() => {
 }, [sp]);
 
 /* ================= WELCOME VOICE ================= */
-useEffect(() => {
-  const played = sessionStorage.getItem('neuronaut_welcome');
-  if (played) return;
 
-  const welcomeMap: Record<Lang, string> = {
-    en: "Welcome to Newronaut. Your life changes today.",
-    pt: "Bem-vindo ao Neuronaut. Sua vida muda hoje.",
-    es: "Bienvenido a Neuronaút. Tu vida cambia hoy.",
-    fr: "Bienvenue sur Neuronaut. Votre vie change aujourd’hui."
-  };
-
-  setTimeout(() => {
-    speak(welcomeMap[lang]);
-  }, 800);
-
-  sessionStorage.setItem('neuronaut_welcome', '1');
-}, [lang, voiceOn]);
 
 // Second useEffect - Listen for auth state changes (magic link, sign in, sign out)
 useEffect(() => {
@@ -637,6 +621,9 @@ useEffect(() => {
         const hasAccepted = await checkTermsAcceptance(uid);
         setHasAcceptedTerms(hasAccepted);
         setShowDisclaimer(!hasAccepted);
+
+
+
         
         // Load past notes
         const { data: notesData } = await supabase
@@ -841,15 +828,33 @@ const isReviewer = sp.get('reviewer') === '1';
         </div>
       )}
 
-      {phase === 'confirming' && userEmail && (
-        <div style={confirmBox}>
-          <div style={{ opacity: 0.85 }}>{T.confirmTitle}</div>
-          <div style={{ color: '#7aa2ff', margin: '6px 0 14px' }}>{userEmail}</div>
-          <button style={primaryBtn} onClick={() => setPhase('profile')}>
-            {T.confirmBtn}
-          </button>
-        </div>
-      )}
+     {phase === 'confirming' && userEmail && (
+  <div style={confirmBox}>
+    <div style={{ opacity: 0.85 }}>{T.confirmTitle}</div>
+    <div style={{ color: '#7aa2ff', margin: '6px 0 14px' }}>{userEmail}</div>
+
+    <button
+      style={primaryBtn}
+      onClick={() => {
+        setPhase('profile');
+
+        const welcome =
+          lang === 'pt'
+            ? (name ? `Bem-vindo de volta ${name}. Como posso te ajudar hoje?` : `Bem-vindo ao Neuronaut. Como posso te ajudar hoje?`)
+          : lang === 'es'
+            ? (name ? `Bienvenido de nuevo ${name}. ¿Cómo puedo ayudarte hoy?` : `Bienvenido a Neuronaut. ¿Cómo puedo ayudarte hoy?`)
+          : lang === 'fr'
+            ? (name ? `Bon retour ${name}. Comment puis-je vous aider aujourd’hui ?` : `Bienvenue sur Neuronaut. Comment puis-je vous aider aujourd’hui ?`)
+          : (name ? `Welcome back ${name}. How can I help you today?` : `Welcome to Neuronaut. How can I help you today?`);
+
+        speak(welcome);
+      }}
+    >
+      {T.confirmBtn}
+    </button>
+  </div>
+)}
+
 
       {phase === 'profile' && (
         <div style={questionBox}>
