@@ -374,25 +374,33 @@ export default function DashboardClientNotes() {
   const [name, setName] = useState('');
 const [country, setCountry] = useState('');
 const [voiceOn, setVoiceOn] = useState(true);
+
 /* ================= VOICE ================= */
-const speak = (text: string) => {
-  if (!voiceOn) return; // 🔥 HARD STOP (voice disabled)
+/* ================= VOICE (ELEVENLABS) ================= */
+const speak = async (text: string) => {
+  if (!voiceOn) return;
 
-  const msg = new SpeechSynthesisUtterance(text);
+  try {
+    const res = await fetch('/api/voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
 
-  const voices = window.speechSynthesis.getVoices();
+    if (!res.ok) throw new Error('Eleven failed');
 
-  const female =
-    voices.find(v =>
-      v.name.toLowerCase().includes('female') ||
-      v.name.toLowerCase().includes('zira') ||
-      v.name.toLowerCase().includes('samantha') ||
-      v.name.toLowerCase().includes('google us english')
-    ) || voices[0];
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
 
-  msg.voice = female;
+    const audio = new Audio(url);
+    await audio.play();
 
-  window.speechSynthesis.speak(msg);
+  } catch {
+    // ⭐ fallback to browser voice (Google/Safari/etc)
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    speechSynthesis.speak(utter);
+  }
 };
 
   const [pronoun, setPronoun] = useState<Pronoun>(null);
@@ -545,6 +553,7 @@ const handleDelete = async () => {
 // First useEffect - Check initial session on page load
 useEffect(() => {
   const initializeUser = async () => {
+
     try {
       const guest = localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
       if (guest) {
@@ -598,6 +607,9 @@ useEffect(() => {
   initializeUser();
 }, [sp]);
 
+/* ================= WELCOME VOICE ================= */
+
+
 // Second useEffect - Listen for auth state changes (magic link, sign in, sign out)
 useEffect(() => {
   const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -615,6 +627,9 @@ useEffect(() => {
         const hasAccepted = await checkTermsAcceptance(uid);
         setHasAcceptedTerms(hasAccepted);
         setShowDisclaimer(!hasAccepted);
+
+
+
         
         // Load past notes
         const { data: notesData } = await supabase
@@ -819,15 +834,33 @@ const isReviewer = sp.get('reviewer') === '1';
         </div>
       )}
 
-      {phase === 'confirming' && userEmail && (
-        <div style={confirmBox}>
-          <div style={{ opacity: 0.85 }}>{T.confirmTitle}</div>
-          <div style={{ color: '#7aa2ff', margin: '6px 0 14px' }}>{userEmail}</div>
-          <button style={primaryBtn} onClick={() => setPhase('profile')}>
-            {T.confirmBtn}
-          </button>
-        </div>
-      )}
+     {phase === 'confirming' && userEmail && (
+  <div style={confirmBox}>
+    <div style={{ opacity: 0.85 }}>{T.confirmTitle}</div>
+    <div style={{ color: '#7aa2ff', margin: '6px 0 14px' }}>{userEmail}</div>
+
+    <button
+      style={primaryBtn}
+      onClick={() => {
+        setPhase('profile');
+
+        const welcome =
+          lang === 'pt'
+            ? (name ? `Bem-vindo de volta ${name}. Como posso te ajudar hoje?` : `Bem-vindo ao Neuronaut. Como posso te ajudar hoje?`)
+          : lang === 'es'
+            ? (name ? `Bienvenido de nuevo ${name}. ¿Cómo puedo ayudarte hoy?` : `Bienvenido a Neuronaut. ¿Cómo puedo ayudarte hoy?`)
+          : lang === 'fr'
+            ? (name ? `Bon retour ${name}. Comment puis-je vous aider aujourd’hui ?` : `Bienvenue sur Neuronaut. Comment puis-je vous aider aujourd’hui ?`)
+          : (name ? `Welcome back ${name}. How can I help you today?` : `Welcome to Neuronaut. How can I help you today?`);
+
+        speak(welcome);
+      }}
+    >
+      {T.confirmBtn}
+    </button>
+  </div>
+)}
+
 
       {phase === 'profile' && (
         <div style={questionBox}>

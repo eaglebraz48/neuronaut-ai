@@ -387,13 +387,19 @@ const speak = async (text: string) => {
       body: JSON.stringify({ text }),
     });
 
+    if (!res.ok) throw new Error('Eleven failed');
+
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
 
     const audio = new Audio(url);
-    audio.play();
-  } catch (err) {
-    console.error('voice error', err);
+    await audio.play();
+
+  } catch {
+    // ⭐ fallback to browser voice (Google/Safari/etc)
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    speechSynthesis.speak(utter);
   }
 };
 
