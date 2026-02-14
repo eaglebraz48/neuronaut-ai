@@ -133,24 +133,33 @@ export async function POST(req: Request) {
 
     if (user) {
       await supabase
+        .from('neuronaut_profiles')
+        .update({
+          voice_count_today: usageCount + 1,
+          voice_last_reset: now.toISOString()
+        })
+        .eq('id', user.id)
+    } else {
+      const ip =
+        req.headers.get('x-forwarded-for') ||
+        req.headers.get('x-real-ip') ||
+        'unknown'
 
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error('ElevenLabs error:', err);
-      return new NextResponse('TTS failed', { status: 500 });
+      await supabase
+        .from('guest_voice_usage')
+        .upsert({
+          ip,
+          voice_count_today: usageCount + 1,
+          voice_last_reset: now.toISOString(),
+          updated_at: now.toISOString()
+        })
     }
 
-    const audio = await response.arrayBuffer();
+    return new NextResponse(await response.arrayBuffer(), {
+      headers: { 'Content-Type': 'audio/mpeg' }
+    })
 
-    return new NextResponse(audio, {
-      headers: {
-        'Content-Type': 'audio/mpeg',
-      },
-    });
   } catch (err) {
-    console.error(err);
-    return new NextResponse('Voice error', { status: 500 });
+    return new NextResponse('Server error', { status: 500 })
   }
 }
-
