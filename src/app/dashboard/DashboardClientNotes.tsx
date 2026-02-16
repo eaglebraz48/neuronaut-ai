@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DisclaimerModal from '@/components/DisclaimerModal';
+let voiceCooldown = false;
+
 
 /* ================= TYPES ================= */
 type Lang = 'en' | 'es' | 'pt' | 'fr';
@@ -374,11 +376,28 @@ export default function DashboardClientNotes() {
   const [name, setName] = useState('');
 const [country, setCountry] = useState('');
 const [voiceOn, setVoiceOn] = useState(true);
+const [voiceUses, setVoiceUses] = useState(0);
+const isSigned = !!userId;
+
+const FREE_GUEST_LIMIT = 3;
+const FREE_USER_LIMIT = 6;
+
+const limit = isSigned ? FREE_USER_LIMIT : FREE_GUEST_LIMIT;
+const canUsePremiumVoice = voiceUses < limit;
+
 
 /* ================= VOICE ================= */
 /* ================= VOICE (ELEVENLABS) ================= */
 const speak = async (text: string) => {
   if (!voiceOn) return;
+
+  // LIMIT REACHED → force Google voice
+  if (!canUsePremiumVoice) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    speechSynthesis.speak(utter);
+    return;
+  }
 
   try {
     const res = await fetch('/api/voice', {
@@ -395,8 +414,11 @@ const speak = async (text: string) => {
     const audio = new Audio(url);
     await audio.play();
 
+    // count only successful Eleven usage
+    setVoiceUses(v => v + 1);
+
   } catch {
-    // ⭐ fallback to browser voice (Google/Safari/etc)
+    // fallback ONLY if Eleven fails
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = lang;
     speechSynthesis.speak(utter);
@@ -966,11 +988,14 @@ const isReviewer = sp.get('reviewer') === '1';
                 style={primaryBtn}
                 onClick={() => {
                   const intro =
-                    reason === 'work'
-                      ? T.intro_work.replace('{name}', name)
-                      : reason === 'finance'
-                      ? T.intro_finance.replace('{name}', name)
-                      : T.intro_future.replace('{name}', name)
+  lang === 'pt'
+    ? 'Bem-vindo ao Neuronaut. Você está ouvindo uma voz… formada por muitas vidas.'
+    : lang === 'es'
+    ? 'Bienvenido a Neuronaut. Estás escuchando una voz… formada por muchas vidas.'
+    : lang === 'fr'
+    ? 'Bienvenue sur Neuronaut. Vous entendez une voix… formée par de nombreuses vies.'
+    : 'Welcome to Neuronaut. You’re hearing one voice… formed from many lives.';
+
 
                   setMessages([{ role: 'assistant', text: intro }])
                   speak(intro)
