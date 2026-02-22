@@ -1,39 +1,37 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: Request) {
   try {
     const { text } = await req.json();
 
     const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      return new NextResponse('Missing ELEVENLABS_API_KEY', { status: 401 });
-    }
+    if (!apiKey) return new NextResponse('Missing key', { status: 401 });
 
-    // ===== CACHE PATH =====
+    // unique hash per sentence
     const hash = crypto.createHash('md5').update(text).digest('hex');
-    const cacheDir = path.join(process.cwd(), 'voice-cache');
-    const filePath = path.join(cacheDir, `${hash}.mp3`);
+    const path = `${hash}.mp3`;
 
-    // create folder if missing
-    if (!fs.existsSync(cacheDir)) {
-      fs.mkdirSync(cacheDir);
+    // ===== 1) CHECK CACHE =====
+    const { data: existing } = await supabase.storage
+      .from('voice-cache')
+      .download(path);
+
+    if (existing) {
+      const buffer = Buffer.from(await existing.arrayBuffer());
+      return new NextResponse(buffer, { headers: { 'Content-Type': 'audio/mpeg' } });
     }
 
-    // ===== RETURN CACHED AUDIO =====
-    if (fs.existsSync(filePath)) {
-      const file = fs.readFileSync(filePath);
-      return new NextResponse(file, {
-        headers: { 'Content-Type': 'audio/mpeg' },
-      });
-    }
-
-    // ===== GENERATE NEW AUDIO =====
+    // ===== 2) GENERATE =====
     const voiceId = 'y7B0QJe0awwvH70C4Kzz';
 
-    const response = await fetch(
+    const eleven = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
         method: 'POST',
@@ -54,16 +52,18 @@ export async function POST(req: Request) {
       }
     );
 
-    if (!response.ok) {
-      const err = await response.text();
-      console.error('ElevenLabs error:', err);
+    if (!eleven.ok) {
+      const err = await eleven.text();
+      console.error(err);
       return new NextResponse('TTS failed', { status: 500 });
     }
 
-    const buffer = Buffer.from(await response.arrayBuffer());
+    const buffer = Buffer.from(await eleven.arrayBuffer());
 
-    // ===== SAVE FOR FUTURE USERS =====
-    fs.writeFileSync(filePath, buffer);
+    // ===== 3) SAVE TO SUPABASE =====
+    await supabase.storage
+      .from('voice-cache')
+      .upload(path, buffer, { contentType: 'audio/mpeg', upsert: true });
 
     return new NextResponse(buffer, {
       headers: { 'Content-Type': 'audio/mpeg' },

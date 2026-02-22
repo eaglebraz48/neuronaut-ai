@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DisclaimerModal from '@/components/DisclaimerModal';
+let voiceCooldown = false;
+
 
 /* ================= TYPES ================= */
 type Lang = 'en' | 'es' | 'pt' | 'fr';
@@ -370,15 +372,48 @@ export default function DashboardClientNotes() {
   const [isGuest, setIsGuest] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+const [name, setName] = useState('');
 
-  const [name, setName] = useState('');
+const cleanName =
+  typeof name === 'string' && name.trim().length > 0
+    ? name
+        .trim()
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ')
+    : '';
+
+const displayName =
+  cleanName ||
+  (typeof userEmail === 'string'
+    ? userEmail.split('@')[0]
+    : '') ||
+  'there';
 const [country, setCountry] = useState('');
 const [voiceOn, setVoiceOn] = useState(true);
+const [voiceUses, setVoiceUses] = useState(0);
+const isSigned = !!userId;
+
+const FREE_GUEST_LIMIT = 3;
+const FREE_USER_LIMIT = 6;
+
+const limit = isSigned ? FREE_USER_LIMIT : FREE_GUEST_LIMIT;
+const canUsePremiumVoice = voiceUses < limit;
+
 
 /* ================= VOICE ================= */
 /* ================= VOICE (ELEVENLABS) ================= */
 const speak = async (text: string) => {
   if (!voiceOn) return;
+
+  // LIMIT REACHED → force Google voice
+  if (!canUsePremiumVoice) {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    speechSynthesis.speak(utter);
+    return;
+  }
 
   try {
     const res = await fetch('/api/voice', {
@@ -395,8 +430,11 @@ const speak = async (text: string) => {
     const audio = new Audio(url);
     await audio.play();
 
+    // count only successful Eleven usage
+    setVoiceUses(v => v + 1);
+
   } catch {
-    // ⭐ fallback to browser voice (Google/Safari/etc)
+    // fallback ONLY if Eleven fails
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = lang;
     speechSynthesis.speak(utter);
@@ -568,30 +606,74 @@ useEffect(() => {
       const { data } = await supabase.auth.getSession();
       const session = data?.session;
       
-      if (session?.user) {
-        const uid = session.user.id;
-        const email = session.user.email ?? null;
-        
-        setUserId(uid);
-        setUserEmail(email);
-        const hasAccepted = await checkTermsAcceptance(uid);
-        setHasAcceptedTerms(hasAccepted);
-        setShowDisclaimer(!hasAccepted);
-        
-        // Load past notes for returning users
-        const { data: notesData } = await supabase
-          .from('working_notes')
-          .select('content')
-          .eq('user_id', uid)
-          .order('created_at', { ascending: false })
-          .limit(6);
-        if (notesData && notesData.length > 0) {
-          setNotes(notesData.map(n => n.content));
-        }
-        
-        setPhase('confirming');
-      } else {
-        setPhase('profile');
+     if (session?.user) {
+  const uid = session.user.id;
+  const email = session.user.email ?? null;
+
+  setUserId(uid);
+  setUserEmail(email);
+
+  // 🔥 LOAD USER PROFILE
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('name, country, pronoun')
+   .or(`user_id.eq.${uid},id.eq.${uid}`)
+.single();
+
+if (profile) {
+  setName(profile.name || '');
+  setCountry(profile.country || '');
+  setPronoun(profile.pronoun || null);
+}
+
+  const hasAccepted = await checkTermsAcceptance(uid);
+  setHasAcceptedTerms(hasAccepted);
+  setShowDisclaimer(!hasAccepted);
+
+  // 🔥 Load latest session recap
+  const { data: latestRecap } = await supabase
+    .from('session_recaps')
+    .select('recap')
+    .eq('user_id', uid)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  // 🔥 CHECK if login note already exists
+  const { data: existing } = await supabase
+    .from('working_notes')
+    .select('id')
+    .eq('user_id', uid)
+    .eq('source', 'login')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  // 🔥 Insert login refresh note ONLY if missing
+  if (!existing && latestRecap?.recap) {
+    await supabase.from('working_notes').insert({
+      user_id: uid,
+      content: `Session restarted. Last session summary: ${latestRecap.recap}`,
+      source: 'login',
+      created_at: new Date().toISOString(),
+    });
+  }
+
+  // Load past notes for returning users
+  const { data: notesData } = await supabase
+    .from('working_notes')
+    .select('content')
+    .eq('user_id', uid)
+    .order('created_at', { ascending: false })
+    .limit(6);
+
+  if (notesData && notesData.length > 0) {
+    setNotes(notesData.map(n => n.content));
+  }
+
+  setPhase('confirming');
+} else {
+        setPhase('guided');
         setShowDisclaimer(true);
         setHasAcceptedTerms(false);
       }
@@ -622,6 +704,16 @@ useEffect(() => {
         
         setUserId(uid);
         setUserEmail(email);
+const { data: profile } = await supabase
+  .from('profiles')
+  .select('name, country')
+  .eq('user_id', uid)
+  .single();
+
+if (profile) {
+  setName(profile.name || '');
+  setCountry(profile.country || '');
+}
         setIsGuest(false);
         
         const hasAccepted = await checkTermsAcceptance(uid);
@@ -659,6 +751,25 @@ useEffect(() => {
     authListener.subscription.unsubscribe();
   };
 }, []);
+/* ================= AUTO SAVE PROFILE ================= */
+useEffect(() => {
+  const saveProfile = async () => {
+    if (!userId) return;
+    if (!name || !name.trim()) return;
+
+    await supabase.from('profiles').upsert(
+      {
+        user_id: userId,
+        name: name.trim(),
+        country: country || '',
+        pronoun,
+      },
+      { onConflict: 'user_id' }
+    );
+  };
+
+  saveProfile();
+}, [userId, name, country, pronoun]);
 const handleSend = async () => {
   if (!inputValue.trim() || isLoading) return;
 
@@ -731,6 +842,7 @@ setAiReplyCount(c => {
       setNotes((prev) =>
         prev.includes(data.note) ? prev : [...prev, data.note]
       );
+await saveWorkingNote(userId, data.note);
 
   
     }
@@ -806,6 +918,26 @@ const isReviewer = sp.get('reviewer') === '1';
 
           {userEmail ? (
             <>
+{/* 👇 ADD THIS BUTTON RIGHT HERE */}
+    <button
+      onClick={() => {
+        setStep(1);
+        setReason(null);
+        setPhase('profile');
+      }}
+      style={{
+        padding: '6px 12px',
+        borderRadius: 8,
+        background: '#fee2e2',
+        color: '#7f1d1d',
+        border: '1px solid #fecaca',
+        cursor: 'pointer',
+        fontWeight: 700,
+      }}
+      className="auth-btn-mobile"
+    >
+      Edit profile
+    </button>
               <button onClick={handleSignOut} style={signOutBtn} className="auth-btn-mobile">
                 {T.signout}
               </button>
@@ -841,20 +973,26 @@ const isReviewer = sp.get('reviewer') === '1';
 
     <button
       style={primaryBtn}
-      onClick={() => {
-        setPhase('profile');
+     onClick={async () => {
 
-        const welcome =
-          lang === 'pt'
-            ? (name ? `Bem-vindo de volta ${name}. Como posso te ajudar hoje?` : `Bem-vindo ao Neuronaut. Como posso te ajudar hoje?`)
-          : lang === 'es'
-            ? (name ? `Bienvenido de nuevo ${name}. ¿Cómo puedo ayudarte hoy?` : `Bienvenido a Neuronaut. ¿Cómo puedo ayudarte hoy?`)
-          : lang === 'fr'
-            ? (name ? `Bon retour ${name}. Comment puis-je vous aider aujourd’hui ?` : `Bienvenue sur Neuronaut. Comment puis-je vous aider aujourd’hui ?`)
-          : (name ? `Welcome back ${name}. How can I help you today?` : `Welcome to Neuronaut. How can I help you today?`);
+  // 🚨 SKIP profile + guided for returning users
+  setPhase('chat');
 
-        speak(welcome);
-      }}
+const welcome =
+  lang === 'pt'
+    ? `Bem-vindo de volta ${displayName}.`
+    : lang === 'es'
+    ? `Bienvenido de nuevo ${displayName}.`
+    : lang === 'fr'
+    ? `Bon retour ${displayName}.`
+    : `Welcome back ${displayName}.`;
+
+  setMessages([
+    { role: 'assistant', text: welcome }
+  ]);
+
+  speak(welcome);
+}}
     >
       {T.confirmBtn}
     </button>
@@ -911,7 +1049,39 @@ const isReviewer = sp.get('reviewer') === '1';
               cursor: !name || !pronoun || !hasAcceptedTerms ? 'not-allowed' : 'pointer',
             }}
             disabled={!name || !pronoun || !hasAcceptedTerms}
-            onClick={() => setPhase('guided')}
+         onClick={async () => {
+
+  // SAVE PROFILE
+  if (userId) {
+    await supabase.from('profiles').upsert(
+      {
+        user_id: userId,
+        name: name.trim(),
+        country,
+        pronoun,
+      },
+      { onConflict: 'user_id' }
+    );
+  }
+
+  // 🔥 INSTANT LOCAL UPDATE (NO LOGOUT NEEDED)
+  setName(name.trim());
+
+  // ❤️ HUMAN ACKNOWLEDGEMENT
+  const confirmName =
+    lang === 'pt'
+      ? `Entendido — vou te chamar de ${name.trim()} agora.`
+      : lang === 'es'
+      ? `Perfecto — ahora te llamaré ${name.trim()}.`
+      : lang === 'fr'
+      ? `D’accord — je vais t’appeler ${name.trim()} maintenant.`
+      : `Got it — I’ll call you ${name.trim()} from now on.`;
+
+  setMessages([{ role: 'assistant', text: confirmName }]);
+  speak(confirmName);
+
+  setPhase('chat');
+}}
           >
             {T.startTalking}
           </button>
@@ -956,7 +1126,11 @@ const isReviewer = sp.get('reviewer') === '1';
 
           {step === 3 && (
             <>
-              <div style={{ color: '#1E2A5A', marginBottom: 12, fontWeight: 600 }}>{T.grounding}</div>
+             {!userId && (
+  <div style={{ color: '#1E2A5A', marginBottom: 12, fontWeight: 600 }}>
+    {T.grounding}
+  </div>
+)}
 
               <div style={question} className="question-text-mobile">
                 {T.q3}
@@ -964,18 +1138,32 @@ const isReviewer = sp.get('reviewer') === '1';
 
               <button
                 style={primaryBtn}
-                onClick={() => {
-                  const intro =
-                    reason === 'work'
-                      ? T.intro_work.replace('{name}', name)
-                      : reason === 'finance'
-                      ? T.intro_finance.replace('{name}', name)
-                      : T.intro_future.replace('{name}', name)
+                onClick={async () => {
 
-                  setMessages([{ role: 'assistant', text: intro }])
-                  speak(intro)
-                  setPhase('chat')
-                }}
+  // 🔵 SAVE PROFILE IF LOGGED IN
+  if (userId) {
+    await supabase.from('profiles').upsert({
+      user_id: userId,
+      name,
+      country,
+      pronoun,
+    }, { onConflict: 'user_id' });
+  }
+
+  const intro =
+    lang === 'pt'
+      ? 'Bem-vindo ao Neuronaut. Você está ouvindo uma voz… formada por muitas vidas.'
+      : lang === 'es'
+      ? 'Bienvenido a Neuronaut. Estás escuchando una voz… formada por muchas vidas.'
+      : lang === 'fr'
+      ? 'Bienvenue sur Neuronaut. Vous entendez une voix… formée par de nombreuses vies.'
+      : 'Welcome to Neuronaut. You’re hearing one voice… formed from many lives.';
+
+  setMessages([{ role: 'assistant', text: intro }]);
+  speak(intro);
+  setPhase('chat');
+}}
+
               >
                 {T.startTalking}
               </button>
