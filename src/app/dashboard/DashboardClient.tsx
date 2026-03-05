@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DisclaimerModal from '@/components/DisclaimerModal';
+
 let voiceCooldown = false;
 
-
 /* ================= TYPES ================= */
+
 type Lang = 'en' | 'es' | 'pt' | 'fr';
 type Phase = 'confirming' | 'profile' | 'guided' | 'chat';
-type Reason = 'work' | 'finance' | 'future' | 'other' | null;
+type Reason = 'work' | 'finance' | 'future' | 'skills' | 'talk' | 'other' | null;
 
 type Pronoun = 'neutral' | 'they' | 'he' | 'she' | null;
 
@@ -20,10 +21,10 @@ type ChatMessage = {
 };
 
 type CopySchema = {
-voiceOn: string;
-voiceOff: string;
-voiceTurnOn: string;
-voiceTurnOff: string;
+  voiceOn: string;
+  voiceOff: string;
+  voiceTurnOn: string;
+  voiceTurnOff: string;
 
   listening: string;
   back: string;
@@ -54,6 +55,8 @@ voiceTurnOff: string;
   q1_work: string;
   q1_finance: string;
   q1_future: string;
+  q1_skills: string;
+  q1_talk: string;
   q1_other: string;
 
   q2_work: string;
@@ -78,16 +81,17 @@ voiceTurnOff: string;
 };
 
 /* ================= COPY ================= */
+
 const COPY: Record<Lang, CopySchema> = {
 
   /* ================= EN ================= */
   en: {
     voiceOn: '🔊 Voice On',
-voiceOff: '🔇 Voice Off',
-voiceTurnOn: 'turn on',
-voiceTurnOff: 'turn off',
+    voiceOff: '🔇 Voice Off',
+    voiceTurnOn: 'turn on',
+    voiceTurnOff: 'turn off',
 
-listening: 'Agent AI · Listening',
+    listening: 'Agent AI · Listening',
     back: 'Back to start',
     guest: 'Guest mode',
     signin: 'Sign in',
@@ -116,6 +120,8 @@ listening: 'Agent AI · Listening',
     q1_work: 'Work or job',
     q1_finance: 'Money or finances',
     q1_future: 'Future direction',
+    q1_skills: 'Skills',
+    q1_talk: 'Talk freely',
     q1_other: 'Something else',
 
     q2_work: 'What best describes your work situation?',
@@ -155,13 +161,12 @@ listening: 'Agent AI · Listening',
     calmNote: 'Clear thinking. Smart steps. Let’s move forward.',
   },
 
-
   /* ================= PT ================= */
   pt: {
-voiceOn: '🔊 Voz ligada',
-voiceOff: '🔇 Voz desligada',
-voiceTurnOn: 'ligar',
-voiceTurnOff: 'desligar',
+    voiceOn: '🔊 Voz ligada',
+    voiceOff: '🔇 Voz desligada',
+    voiceTurnOn: 'ligar',
+    voiceTurnOff: 'desligar',
 
     listening: 'Agente AI · Ouvindo',
     back: 'Voltar ao início',
@@ -192,6 +197,8 @@ voiceTurnOff: 'desligar',
     q1_work: 'Trabalho',
     q1_finance: 'Dinheiro ou finanças',
     q1_future: 'Direção do futuro',
+    q1_skills: 'Habilidades',
+    q1_talk: 'Falar livremente',
     q1_other: 'Outra coisa',
 
     q2_work: 'Como está sua situação profissional?',
@@ -231,13 +238,12 @@ voiceTurnOff: 'desligar',
     calmNote: 'Clareza. Próximos passos inteligentes. Vamos avançar.',
   },
 
-
   /* ================= ES ================= */
   es: {
-voiceOn: '🔊 Voz activada',
-voiceOff: '🔇 Voz desactivada',
-voiceTurnOn: 'encender',
-voiceTurnOff: 'apagar',
+    voiceOn: '🔊 Voz activada',
+    voiceOff: '🔇 Voz desactivada',
+    voiceTurnOn: 'encender',
+    voiceTurnOff: 'apagar',
 
     listening: 'Agente AI · Escuchando',
     back: 'Volver',
@@ -268,17 +274,19 @@ voiceTurnOff: 'apagar',
     q1_work: 'Trabajo',
     q1_finance: 'Dinero',
     q1_future: 'Mi futuro',
+    q1_skills: 'Habilidades',
+    q1_talk: 'Hablar libremente',
     q1_other: 'Otra cosa',
 
     q2_work: '¿Cómo te sientes con el trabajo?',
     q2_other: 'Cuéntame. Te escucho.',
-    q2_work_opts: ['Puedo perderlo', 'Ya lo perdí', 'Estancado', 'Estresado'],
+    q2_work_opts: ['Puedo perderlo','Ya lo perdí','Estancado','Estresado'],
 
     q2_finance: '¿Y el dinero?',
-    q2_finance_opts: ['Muy justo', 'Atrasado', 'Estable pero preocupado', 'Inestable'],
+    q2_finance_opts: ['Muy justo','Atrasado','Estable pero preocupado','Inestable'],
 
     q2_future: '¿Tu camino se siente claro?',
-    q2_future_opts: ['Nada claro', 'Confuso', 'Ideas sin plan', 'Bastante claro'],
+    q2_future_opts: ['Nada claro','Confuso','Ideas sin plan','Bastante claro'],
 
     q3: '¿En qué te ayudo hoy?',
     chatPlaceholder: 'Escribe con normalidad…',
@@ -292,13 +300,12 @@ voiceTurnOff: 'apagar',
     calmNote: 'Aquí para ayudarte, nada más.',
   },
 
-
   /* ================= FR ================= */
   fr: {
-voiceOn: '🔊 Voix activée',
-voiceOff: '🔇 Voix désactivée',
-voiceTurnOn: 'activer',
-voiceTurnOff: 'désactiver',
+    voiceOn: '🔊 Voix activée',
+    voiceOff: '🔇 Voix désactivée',
+    voiceTurnOn: 'activer',
+    voiceTurnOff: 'désactiver',
 
     listening: 'Agent AI · À l’écoute',
     back: 'Retour',
@@ -329,17 +336,19 @@ voiceTurnOff: 'désactiver',
     q1_work: 'Travail',
     q1_finance: 'Argent',
     q1_future: 'Mon avenir',
+    q1_skills: 'Compétences',
+    q1_talk: 'Parler librement',
     q1_other: 'Autre chose',
 
     q2_work: 'Comment te sens-tu au travail ?',
     q2_other: 'Dis-moi. Je t’écoute.',
-    q2_work_opts: ['Risque de le perdre', 'Déjà perdu', 'Bloqué', 'Stressé'],
+    q2_work_opts: ['Risque de le perdre','Déjà perdu','Bloqué','Stressé'],
 
     q2_finance: 'Et côté argent ?',
-    q2_finance_opts: ['Très serré', 'Retards de paiement', 'Stable mais inquiet', 'Instable'],
+    q2_finance_opts: ['Très serré','Retards de paiement','Stable mais inquiet','Instable'],
 
     q2_future: 'Ton chemin est clair ?',
-    q2_future_opts: ['Pas clair', 'Confus', 'Idées sans plan', 'Plutôt clair'],
+    q2_future_opts: ['Pas clair','Confus','Idées sans plan','Plutôt clair'],
 
     q3: 'Comment puis-je aider ?',
     chatPlaceholder: 'Parle normalement…',
@@ -355,13 +364,14 @@ voiceTurnOff: 'désactiver',
 };
 
 const TERMS_VERSION = '2026-01-02';
-
-
 /* ================= COMPONENT ================= */
 export default function DashboardClientNotes() {
   const sp = useSearchParams();
   const router = useRouter();
   const lang = (sp.get('lang') as Lang) || 'en';
+const isGuestMode = () =>
+  localStorage.getItem('neuronaut_guest') === '1' ||
+  sp.get('guest') === '1';
   const T = COPY[lang];
 
 
@@ -372,6 +382,8 @@ export default function DashboardClientNotes() {
   const [isGuest, setIsGuest] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
+const [skipGuidedAfterProfile, setSkipGuidedAfterProfile] = useState(false);
 const [name, setName] = useState('');
 
 const cleanName =
@@ -393,6 +405,9 @@ const displayName =
 const [country, setCountry] = useState('');
 const [voiceOn, setVoiceOn] = useState(true);
 const [voiceUses, setVoiceUses] = useState(0);
+const [aiSpeaking, setAiSpeaking] = useState(false);
+const [waveTick, setWaveTick] = useState(0);
+
 const isSigned = !!userId;
 
 const FREE_GUEST_LIMIT = 3;
@@ -409,12 +424,15 @@ const speak = async (text: string) => {
 
   // LIMIT REACHED → force Google voice
   if (!canUsePremiumVoice) {
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = lang;
-    speechSynthesis.speak(utter);
-    return;
-  }
+const utter = new SpeechSynthesisUtterance(text);
+utter.lang = lang;
 
+setAiSpeaking(true);
+utter.onend = () => setAiSpeaking(false);
+
+speechSynthesis.speak(utter);
+return;
+}
   try {
     const res = await fetch('/api/voice', {
       method: 'POST',
@@ -427,17 +445,28 @@ const speak = async (text: string) => {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
 
-    const audio = new Audio(url);
-    await audio.play();
+const audio = new Audio(url);
+
+setAiSpeaking(true);
+
+audio.onended = () => {
+  setAiSpeaking(false);
+};
+
+await audio.play();
 
     // count only successful Eleven usage
     setVoiceUses(v => v + 1);
 
   } catch {
     // fallback ONLY if Eleven fails
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = lang;
-    speechSynthesis.speak(utter);
+   const utter = new SpeechSynthesisUtterance(text);
+utter.lang = lang;
+
+setAiSpeaking(true);
+utter.onend = () => setAiSpeaking(false);
+
+speechSynthesis.speak(utter);
   }
 };
 
@@ -593,15 +622,16 @@ useEffect(() => {
   const initializeUser = async () => {
 
     try {
-      const guest = localStorage.getItem('neuronaut_guest') === '1' || sp.get('guest') === '1';
-      if (guest) {
-        setIsGuest(true);
-        setPhase('profile');
-        setShowDisclaimer(true);
-        setHasAcceptedTerms(false);
-        setChecked(true);
-        return;
-      }
+     
+   if (isGuestMode()) {
+  setIsGuest(true);
+  setPhase('profile');
+  setStep(1); // force onboarding start
+  setShowDisclaimer(true);
+  setHasAcceptedTerms(false);
+  setChecked(true);
+  return;
+}
       
       const { data } = await supabase.auth.getSession();
       const session = data?.session;
@@ -625,6 +655,18 @@ if (profile) {
   setCountry(profile.country || '');
   setPronoun(profile.pronoun || null);
 }
+
+/* ⭐ STEP 2 — detect new vs returning user */
+const isNewUser =
+  !profile ||
+  !profile.name ||
+  !profile.pronoun;
+
+/* save to state (used later when confirming) */
+setIsFirstTimeUser(isNewUser);
+
+/* everyone goes to confirm screen */
+setPhase('confirming');
 
   const hasAccepted = await checkTermsAcceptance(uid);
   setHasAcceptedTerms(hasAccepted);
@@ -696,6 +738,7 @@ if (profile) {
 useEffect(() => {
   const { data: authListener } = supabase.auth.onAuthStateChange(
     async (event, session) => {
+if (isGuestMode()) return;
       console.log('Auth event:', event, session); // Debug log
       
       if (event === 'SIGNED_IN' && session?.user) {
@@ -751,7 +794,20 @@ if (profile) {
     authListener.subscription.unsubscribe();
   };
 }, []);
+
+
 /* ================= AUTO SAVE PROFILE ================= */
+useEffect(() => {
+  if (!aiSpeaking) return;
+
+  const interval = setInterval(() => {
+    setWaveTick(v => v + 1);
+  }, 120); // speed of vibration
+
+  return () => clearInterval(interval);
+}, [aiSpeaking]);
+
+
 useEffect(() => {
   const saveProfile = async () => {
     if (!userId) return;
@@ -880,45 +936,66 @@ const isReviewer = sp.get('reviewer') === '1';
     <div style={page}>
       <div className="ghost-symbol" style={ghostSymbol} />
 
-      <div style={aiOrbWrap}>
-        <div style={{ ...aiOrb, ...pulse }} />
-      </div>
+    <div style={aiOrbWrap}>
+  <div style={{ ...aiOrb, ...pulse }} />
 
+  {/* 🔊 AI VOICE WAVE */}
+{/* 🔊 VOICE WAVE — FIXED SIDE */}
+<div
+  style={{
+    position: 'fixed',
+    left: 300,
+    top: 160,
+    display: 'flex',
+    gap: 4,
+    alignItems: 'center',
+    height: 24,
+    zIndex: 4,
+  }}
+>
+  {Array.from({ length: 12 }).map((_, i) => (
+    <div
+      key={i}
+      style={{
+        width: 4,
+       height: aiSpeaking
+  ? 6 + Math.random() * 20
+  : 4,
+        borderRadius: 8,
+        background:
+          'linear-gradient(180deg,#7aa2ff,#8b5cf6,#4cc9f0)',
+        transition: 'height 0.15s ease',
+      }}
+    />
+  ))}
+</div>
+</div>
       <div style={notesAuthBar} className="notes-auth-mobile">
-        <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
-          {(['en', 'pt', 'es', 'fr'] as Lang[]).map((l) => (
-            <button
-              key={l}
-              onClick={() => router.push(`/dashboard?lang=${l}`)}
-              style={{
-                padding: '4px 8px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 600,
-                border: '1px solid rgba(122,162,255,0.4)',
-                background: l === lang ? '#7aa2ff' : 'transparent',
-                color: l === lang ? '#000' : '#7aa2ff',
-                cursor: 'pointer',
-              }}
-            >
-              {l.toUpperCase()}
-            </button>
-          ))}
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-           <button onClick={() => setVoiceOn((v) => !v)} style={linkBtn}>
-  {voiceOn ? T.voiceOn : T.voiceOff}
-</button>
+  {/* LANG BUTTONS */}
+  <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
+    {(['en', 'pt', 'es', 'fr'] as Lang[]).map((l) => (
+      <button
+        key={l}
+        onClick={() => router.push(`/dashboard?lang=${l}`)}
+        style={{
+          padding: '4px 8px',
+          borderRadius: 6,
+          fontSize: 12,
+          fontWeight: 600,
+          border: '1px solid rgba(122,162,255,0.4)',
+          background: l === lang ? '#7aa2ff' : 'transparent',
+          color: l === lang ? '#000' : '#7aa2ff',
+          cursor: 'pointer',
+        }}
+      >
+        {l.toUpperCase()}
+      </button>
+    ))}
+  </div>
 
-
-            <span style={{ fontSize: 11, opacity: 0.7 }}>
-              {voiceOn ? T.voiceTurnOff : T.voiceTurnOn}
-            </span>
-          </div>
-
-          {userEmail ? (
-            <>
-{/* 👇 ADD THIS BUTTON RIGHT HERE */}
+  {/* EDIT PROFILE BUTTON */}
+  {userEmail && (
     <button
       onClick={() => {
         setStep(1);
@@ -926,37 +1003,54 @@ const isReviewer = sp.get('reviewer') === '1';
         setPhase('profile');
       }}
       style={{
-        padding: '6px 12px',
-        borderRadius: 8,
+        padding: '4px 8px',
+        borderRadius: 6,
+        fontSize: 11,
+        fontWeight: 700,
+        border: '1px solid #fecaca',
         background: '#fee2e2',
         color: '#7f1d1d',
-        border: '1px solid #fecaca',
         cursor: 'pointer',
-        fontWeight: 700,
+        whiteSpace: 'nowrap',
       }}
-      className="auth-btn-mobile"
     >
-      Edit profile
+      Edit
     </button>
-              <button onClick={handleSignOut} style={signOutBtn} className="auth-btn-mobile">
-                {T.signout}
-              </button>
+  )}
 
-              <button
-                onClick={handleDelete}
-                style={{ ...signOutBtn, background: '#6b7280' }}
-                className="auth-btn-mobile"
-              >
-                {T.delete}
-              </button>
-            </>
-          ) : (
-            <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
-              {T.signin}
-            </button>
-          )}
-        </div>
-      </div>
+  {/* VOICE */}
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <button onClick={() => setVoiceOn((v) => !v)} style={linkBtn}>
+      {voiceOn ? T.voiceOn : T.voiceOff}
+    </button>
+
+    <span style={{ fontSize: 11, opacity: 0.7 }}>
+      {voiceOn ? T.voiceTurnOff : T.voiceTurnOn}
+    </span>
+  </div>
+
+  {/* AUTH BUTTONS */}
+  {userEmail ? (
+    <>
+      <button onClick={handleSignOut} style={signOutBtn} className="auth-btn-mobile">
+        {T.signout}
+      </button>
+
+      <button
+        onClick={handleDelete}
+        style={{ ...signOutBtn, background: '#6b7280' }}
+        className="auth-btn-mobile"
+      >
+        {T.delete}
+      </button>
+    </>
+  ) : (
+    <button onClick={() => router.push(`/sign-in?lang=${lang}`)} style={signInBtn}>
+      {T.signin}
+    </button>
+  )}
+
+</div>
 
       {phase !== 'confirming' && (
         <div style={label}>
@@ -976,7 +1070,7 @@ const isReviewer = sp.get('reviewer') === '1';
      onClick={async () => {
 
   // 🚨 SKIP profile + guided for returning users
-  setPhase('chat');
+ setPhase('chat');
 
 const welcome =
   lang === 'pt'
@@ -1090,44 +1184,158 @@ const welcome =
 
       {phase === 'guided' && (
         <div style={questionBox}>
-          {step === 1 && (
-            <>
-              <div style={question} className="question-text-mobile">
-                {T.q1}
-              </div>
+     {step === 1 && (
+  <div
+    style={{
+      position: 'relative',
+      width: 420,
+      height: 320,
+      margin: '0 auto',
+    }}
+  >
+    {/* AI CORE */}
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 110,
+        height: 110,
+        borderRadius: '50%',
+        background: 'rgba(122,162,255,0.25)',
+        border: '2px solid rgba(122,162,255,0.6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontWeight: 700,
+        boxShadow: '0 0 25px rgba(122,162,255,0.5)',
+      }}
+    >
+      AI Core
+    </div>
 
-              <button style={optBtn} onClick={() => { setReason('work'); setStep(2); }}>
-                {T.q1_work}
-              </button>
+    {/* TOP */}
+    <button
+      style={{ ...orbitBtn, left: '50%', top: 0 }}
+      onClick={() => {
+  const starter =
+    lang === 'pt'
+      ? "Qual direção futura você quer explorar?"
+      : lang === 'es'
+      ? "¿Qué dirección futura quieres explorar?"
+      : lang === 'fr'
+      ? "Quelle direction future veux-tu explorer ?"
+      : "What future direction do you want to explore?";
 
-              <button style={optBtn} onClick={() => { setReason('finance'); setStep(2); }}>
-                {T.q1_finance}
-              </button>
+  setMessages([{ role: 'assistant', text: starter }]);
+  speak(starter);
+  setPhase('chat');
+}}
+    >
+      {T.q1_future}
+    </button>
 
-              <button style={optBtn} onClick={() => { setReason('future'); setStep(2); }}>
-                {T.q1_future}
-              </button>
-            </>
-          )}
+    {/* LEFT */}
+    <button
+      style={{ ...orbitBtn, left: '10%', top: 110 }}
+      onClick={() => {
+       const starter =
+  lang === 'pt'
+    ? "O que está acontecendo com seu trabalho?"
+    : lang === 'es'
+    ? "¿Qué está pasando con tu trabajo?"
+    : lang === 'fr'
+    ? "Que se passe-t-il avec ton travail ?"
+    : "What’s going on with your work?";
 
-          {step === 2 && reason && (
-            <>
-              <div style={question} className="question-text-mobile">
-                {T[`q2_${reason}` as keyof typeof T]}
-              </div>
+setMessages([{ role: 'assistant', text: starter }]);
+speak(starter);
+setPhase('chat');
+      }}
+    >
+      {T.q1_work}
+    </button>
 
-              {(T[`q2_${reason}_opts` as keyof typeof T] as string[]).map((o) => (
-                <button key={o} style={optBtn} onClick={() => setStep(3)}>
-                  {o}
-                </button>
-              ))}
-            </>
-          )}
+    {/* RIGHT */}
+    <button
+      style={{ ...orbitBtn, left: '100%', top: 110 }}
+      onClick={() => {
+       const starter =
+  lang === 'pt'
+    ? "O que você quer melhorar nas suas finanças?"
+    : lang === 'es'
+    ? "¿Qué quieres mejorar en tus finanzas?"
+    : lang === 'fr'
+    ? "Que veux-tu améliorer dans tes finances ?"
+    : "What do you want to improve about your finances?";
 
+setMessages([{ role: 'assistant', text: starter }]);
+speak(starter);
+setPhase('chat');
+      }}
+    >
+      {T.q1_finance}
+    </button>
+
+    {/* BOTTOM LEFT */}
+  {/* BOTTOM LEFT */}
+<button
+  style={{ ...orbitBtn, left: '20%', top: 240 }}
+  onClick={() => {
+  const starter =
+    lang === 'pt'
+      ? "Quais habilidades você quer melhorar?"
+      : lang === 'es'
+      ? "¿Qué habilidades quieres mejorar?"
+      : lang === 'fr'
+      ? "Quelles compétences veux-tu améliorer ?"
+      : "What skills do you want to improve?";
+
+  setMessages([{ role: 'assistant', text: starter }]);
+  speak(starter);
+  setPhase('chat');
+}}
+>
+  {T.q1_skills}
+</button>
+
+{/* BOTTOM RIGHT */}
+<button
+  style={{ ...orbitBtn, left: '80%', top: 240 }}
+  onClick={() => {
+  const starter =
+    lang === 'pt'
+      ? "Sobre o que você quer conversar?"
+      : lang === 'es'
+      ? "¿De qué quieres hablar?"
+      : lang === 'fr'
+      ? "De quoi veux-tu parler ?"
+      : "What do you want to talk about?";
+
+  setMessages([{ role: 'assistant', text: starter }]);
+  speak(starter);
+  setPhase('chat');
+}}
+>
+  {T.q1_talk}
+</button>
+  </div>
+)}
+
+          
           {step === 3 && (
             <>
              {!userId && (
-  <div style={{ color: '#1E2A5A', marginBottom: 12, fontWeight: 600 }}>
+ <div
+  style={{
+    color: 'rgba(255,255,255,0.95)',
+    textShadow: '0 2px 10px rgba(0,0,0,0.45)',
+    marginBottom: 12,
+    fontWeight: 600,
+  }}
+>
     {T.grounding}
   </div>
 )}
@@ -1313,6 +1521,8 @@ const welcome =
 
 
 /* ================= STYLES ================= */
+const isMobile =
+  typeof window !== 'undefined' && window.innerWidth < 768;
 
 const page: React.CSSProperties = {
   height: '100vh',
@@ -1355,7 +1565,18 @@ const aiOrb = {
   boxShadow: '0 0 40px rgba(120,140,255,0.25), inset 0 0 1px rgba(255,255,255,0.06)',
 
 };
-
+const orbitBtn: React.CSSProperties = {
+  position: 'absolute',
+  transform: 'translateX(-50%)',
+  padding: '10px 16px',
+  borderRadius: 999,
+  border: '1px solid rgba(122,162,255,0.45)',
+  background: '#141a33',
+  color: '#fff',
+  cursor: 'pointer',
+  fontSize: 13,
+  boxShadow: '0 8px 20px rgba(0,0,0,0.35)',
+};
 const label: React.CSSProperties = {
   position: 'absolute',
   top: 28,
@@ -1373,7 +1594,8 @@ const linkBtn = {
 
 const notesAuthBar: React.CSSProperties = {
   position: 'fixed',
-  left: '38%',
+  left: '50%',
+  transform: 'translateX(-50%)',
   top: 80,
   display: 'flex',
   gap: 12,
@@ -1411,23 +1633,37 @@ const confirmBox: React.CSSProperties = {
 
 const questionBox: React.CSSProperties = {
   position: 'absolute',
-  bottom: 80,
-  left: 48,
-  maxWidth: 520,
+
+  bottom: isMobile ? 24 : 80,
+  left: isMobile ? 12 : 48,
+  right: isMobile ? 12 : undefined,
+  maxWidth: isMobile ? 'none' : 520,
+
   zIndex: 3,
-  background: '#EEF3FF',
-  border: '1px solid rgba(92,124,250,0.45)',
-  borderRadius: 18,
-  padding: 20,
-  boxShadow: '0 14px 40px rgba(92,124,250,0.25)',
-  color: '#1E2A5A',
+
+  /* GLASS EFFECT */
+  background: 'rgba(255,255,255,0.14)',
+  backdropFilter: 'blur(26px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(26px) saturate(140%)',
+  border: '1px solid rgba(255,255,255,0.28)',
+
+  /* SHAPE + SPACING */
+  borderRadius: isMobile ? 14 : 18,
+  padding: isMobile ? 18 : 28,
+
+  /* LIGHT + DEPTH */
+  boxShadow:
+    '0 0 80px rgba(130,160,255,0.22), 0 8px 30px rgba(40,80,220,0.25), inset 0 1px 0 rgba(255,255,255,0.35)',
+
+  color: 'rgba(255,255,255,0.95)',
 };
 
-const question = {
+const question: React.CSSProperties = {
   marginBottom: 14,
-  fontSize: 15,
-  color: '#1E2A5A',
+  fontSize: 18,
   fontWeight: 600,
+  color: 'rgba(255,255,255,0.95)',
+  textShadow: '0 2px 10px rgba(0,0,0,0.45)',
 };
 
 const nameInput = {
