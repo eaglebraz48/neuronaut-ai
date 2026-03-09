@@ -365,7 +365,7 @@ const COPY: Record<Lang, CopySchema> = {
 
 const TERMS_VERSION = '2026-01-02';
 /* ================= COMPONENT ================= */
-export default function DashboardClientNotes() {
+export default function DashboardClient() {
   const sp = useSearchParams();
   const router = useRouter();
   const lang = (sp.get('lang') as Lang) || 'en';
@@ -642,11 +642,17 @@ useEffect(() => {
 
   setUserId(uid);
   setUserEmail(email);
-
+// ensure profile row exists
+await supabase.from('profiles')
+  .upsert(
+    { user_id: uid, email: email },
+    { onConflict: 'user_id', ignoreDuplicates: true }
+ 
+);
   // 🔥 LOAD USER PROFILE
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name, country, pronoun')
+    .select('name, country, pronoun, onboarding_completed')
    .or(`user_id.eq.${uid},id.eq.${uid}`)
 .single();
 
@@ -657,10 +663,7 @@ if (profile) {
 }
 
 /* ⭐ STEP 2 — detect new vs returning user */
-const isNewUser =
-  !profile ||
-  !profile.name ||
-  !profile.pronoun;
+const isNewUser = !profile?.onboarding_completed;
 
 /* save to state (used later when confirming) */
 setIsFirstTimeUser(isNewUser);
@@ -749,7 +752,7 @@ if (isGuestMode()) return;
         setUserEmail(email);
 const { data: profile } = await supabase
   .from('profiles')
-  .select('name, country')
+ .select('name, country, onboarding_completed')
   .eq('user_id', uid)
   .single();
 
@@ -808,24 +811,7 @@ useEffect(() => {
 }, [aiSpeaking]);
 
 
-useEffect(() => {
-  const saveProfile = async () => {
-    if (!userId) return;
-    if (!name || !name.trim()) return;
 
-    await supabase.from('profiles').upsert(
-      {
-        user_id: userId,
-        name: name.trim(),
-        country: country || '',
-        pronoun,
-      },
-      { onConflict: 'user_id' }
-    );
-  };
-
-  saveProfile();
-}, [userId, name, country, pronoun]);
 const handleSend = async () => {
   if (!inputValue.trim() || isLoading) return;
 
@@ -944,15 +930,22 @@ const isReviewer = sp.get('reviewer') === '1';
 <div
   style={{
     position: 'fixed',
-    left: 300,
-    top: 160,
+
+    left: isMobile ? '50%' : 300,
+    transform: isMobile ? 'translateX(-50%)' : 'none',
+
+    bottom: isMobile ? 140 : 'auto',
+    top: isMobile ? 'auto' : 160,
+
     display: 'flex',
     gap: 4,
     alignItems: 'center',
     height: 24,
-    zIndex: 4,
+
+    zIndex: 50,
   }}
 >
+
   {Array.from({ length: 12 }).map((_, i) => (
     <div
       key={i}
@@ -1069,9 +1062,12 @@ const isReviewer = sp.get('reviewer') === '1';
       style={primaryBtn}
      onClick={async () => {
 
-  // 🚨 SKIP profile + guided for returning users
- setPhase('chat');
+  if (isFirstTimeUser) {
+    setPhase('profile');   // NEW USERS → PROFILE FIRST
+    return;
+  }
 
+  setPhase('chat');        // RETURNING USERS → CHAT
 const welcome =
   lang === 'pt'
     ? `Bem-vindo de volta ${displayName}.`
@@ -1143,20 +1139,21 @@ const welcome =
               cursor: !name || !pronoun || !hasAcceptedTerms ? 'not-allowed' : 'pointer',
             }}
             disabled={!name || !pronoun || !hasAcceptedTerms}
-         onClick={async () => {
+        onClick={async () => {
+  console.log('SAVE ATTEMPT:', { userId, name, cleanName }); // ← ADD HERE
 
   // SAVE PROFILE
-  if (userId) {
-    await supabase.from('profiles').upsert(
-      {
-        user_id: userId,
-        name: name.trim(),
-        country,
-        pronoun,
-      },
-      { onConflict: 'user_id' }
-    );
-  }
+  if (userId && name.trim()) {
+  await supabase
+  .from('profiles')
+  .update({
+    name: cleanName || name.trim(),
+    country,
+    pronoun,
+    onboarding_completed: true,
+  })
+  .eq('user_id', userId);
+}
 
   // 🔥 INSTANT LOCAL UPDATE (NO LOGOUT NEEDED)
   setName(name.trim());
@@ -1352,7 +1349,7 @@ setPhase('chat');
   if (userId) {
     await supabase.from('profiles').upsert({
       user_id: userId,
-      name,
+     name: cleanName,
       country,
       pronoun,
     }, { onConflict: 'user_id' });

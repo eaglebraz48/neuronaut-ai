@@ -412,10 +412,13 @@ export async function POST(req: Request) {
 
       messages = JSON.parse((form.get('messages') as string) || '[]');
       context = JSON.parse((form.get('context') as string) || '{}');
+
     } else {
+
       const body = await req.json();
       messages = body.messages || [];
       context = body.context || {};
+
     }
 
     if (!Array.isArray(messages)) {
@@ -427,95 +430,102 @@ export async function POST(req: Request) {
 
     if (containsBlockedContent(lastUserMsg)) {
       return NextResponse.json({
-        reply: 'I can’t help with harm or crisis topics. Let’s stay focused.',
+        reply: 'I can’t help with harm or crisis topics. Let’s stay focused.'
       });
     }
 
-    /* ================= PROFILE LOAD (FIXED) ================= */
+    /* ================= PROFILE ================= */
+
     let userName: string | null = null;
     let userCountry: string | null = null;
-    let lastWorkingNote = '';
+    let workingNotes = '';
 
-// REPLACE the profile load block with this:
-if (context?.userId) {
-  // Trust what the dashboard sends first
-  userName = context.name || null;
-  userCountry = context.country || null;
+    if (context?.userId) {
 
-  // Only hit DB if context didn't provide them
-  if (!userName || !userCountry) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('name, country, pronoun')
-      .or(`user_id.eq.${context.userId},id.eq.${context.userId}`)
-      .single();
+      userName = context.name || null;
+      userCountry = context.country || null;
 
-    if (profile) {
-      userName = userName || profile.name || null;
-      userCountry = userCountry || profile.country || null;
-    }
-  }
+      if (!userName || !userCountry) {
 
-      /* Auto-capture name if user says it */
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('name, country')
+          .or(`user_id.eq.${context.userId},id.eq.${context.userId}`)
+          .single();
+
+        if (profile) {
+          userName = userName || profile.name || null;
+          userCountry = userCountry || profile.country || null;
+        }
+      }
+
+      /* name capture */
+
       if (!userName && lastUserMsg) {
+
         const match =
           lastUserMsg.match(/\b(my name is|i'm|im|i am|me chamo|eu sou)\s+([A-Za-zÀ-ÿ' -]{2,40})\b/i);
 
         const extracted = match?.[2]?.trim();
 
         if (extracted) {
+
           userName = extracted;
 
           await supabase
             .from('profiles')
-            .upsert({
-              user_id: context.userId,
-              name: extracted
-            }, { onConflict: 'user_id' });
+            .upsert(
+              { user_id: context.userId, name: extracted },
+              { onConflict: 'user_id' }
+            );
         }
       }
 
-      const { data: lastNote } = await supabase
+      /* working notes */
+
+      const { data: notes } = await supabase
         .from('working_notes')
         .select('content')
         .eq('user_id', context.userId)
         .order('created_at', { ascending:false })
-        .limit(1)
-        .single();
+        .limit(10);
 
-      if (lastNote) {
-        lastWorkingNote = lastNote.content || '';
+      if (notes?.length) {
+        workingNotes = notes.map(n => n.content).join('\n');
       }
+
     }
 
-    /* ================= MEMORY (LAST 2 ONLY) ================= */
+    /* ================= MEMORY ================= */
+
     let continuity = '';
 
     if (context?.userId) {
+
       const { data: recaps } = await supabase
         .from('session_recaps')
         .select('recap,created_at')
         .eq('user_id', context.userId)
         .order('created_at',{ ascending:false })
-        .limit(2);
+        .limit(8);
 
       if (recaps?.length) {
         continuity =
           'MEMORY:\n' +
           recaps.map((r:any)=>r.recap).join('\n\n');
       }
+
     }
 
     const lang = context?.lang || detectLang(lastUserMsg);
     const langName = LANG_NAMES[lang];
 
-    /* ================= DECISION DETECTION ================= */
     const futurePathsMode =
       /\b(or|vs|versus|should i|stay or|leave or|option|choice|decide|decision|compare)\b/i.test(lastUserMsg);
 
     /* ================= SYSTEM PROMPT ================= */
 
-let systemPrompt = `
+    let systemPrompt = `
 ${PERSONALITY_LAYER}
 
 ${PRESENCE_LAYER}
@@ -532,39 +542,38 @@ Language: ${langName}
 
 Name: ${userName || 'not provided'}
 Country: ${userCountry || 'not provided'}
-Last note: ${lastWorkingNote || 'none'}
+
+Recent user context:
+${workingNotes || 'none'}
 
 ${continuity}
 `;
 
     if (futurePathsMode) {
-      systemPrompt += `
 
+      systemPrompt += `
 DECISION MODE:
 
-- User may be facing a decision.
-- First ask EXACTLY:
+- Ask first:
 
 "Do you want me to compare two possible futures to help you with a decision point?"
 
-- Wait for user confirmation before simulating.
+- Wait for confirmation.
 
 If user says yes:
-- Simulate Path A vs Path B.
-- Compare emotional, financial, and lifestyle outcomes.
-- End with a clear recommended direction.
+simulate Path A vs Path B and recommend direction.
 `;
+
     }
 
     systemPrompt += `
-
 Behavior:
-- If Name exists → greet by name naturally.
-- NEVER ask name again.
-- reference recent context naturally.
+- greet by name if known
+- never ask name again
 `;
 
     /* ================= GPT INPUT ================= */
+
     const gptMessages: any[] = [
       { role:'system', content: systemPrompt },
 
@@ -596,7 +605,8 @@ Behavior:
     const reply =
       completion.choices[0]?.message?.content?.trim() || '';
 
-    /* ================= SAVE WORKING NOTE ================= */
+    /* ================= SAVE NOTES ================= */
+
     if (context?.userId && lastUserMsg) {
 
       await supabase.from('working_notes').insert({
@@ -612,18 +622,30 @@ Behavior:
         .delete()
         .eq('user_id', context.userId)
         .lt('created_at', cutoff);
+
     }
 
     /* ================= SAVE RECAP ================= */
+
     if (context?.userId && reply) {
 
-      /* ===== STRUCTURED RECAP ===== */
-      const recapSummary = `
-topic: ${lastUserMsg.slice(0,80)}
-goal: ${lastUserMsg.slice(0,60)}
-user_state: exploring / planning / uncertain / progressing
-next_step: follow up next session
-`;
+      const recapCompletion = await openai.chat.completions.create({
+        model:"gpt-4o-mini",
+        temperature:0.2,
+        messages:[
+          {
+            role:"system",
+            content:"Summarize the key user goal or topic from this conversation in one clear sentence."
+          },
+          {
+            role:"user",
+            content:lastUserMsg
+          }
+        ]
+      });
+
+      const recapSummary =
+        recapCompletion.choices[0]?.message?.content?.trim() || lastUserMsg;
 
       await supabase.from('session_recaps').insert({
         user_id: context.userId,
@@ -636,18 +658,29 @@ next_step: follow up next session
         .eq('user_id', context.userId)
         .order('created_at',{ ascending:false });
 
-      if (recaps && recaps.length > 2) {
-        const remove = recaps.slice(2).map((r:any)=>r.id);
-        await supabase.from('session_recaps').delete().in('id', remove);
+      if (recaps && recaps.length > 8) {
+
+        const remove = recaps.slice(8).map((r:any)=>r.id);
+
+        await supabase
+          .from('session_recaps')
+          .delete()
+          .in('id', remove);
+
       }
+
     }
 
     return NextResponse.json({ reply });
 
   } catch (err) {
+
     console.error(err);
+
     return NextResponse.json({
-      reply:'Something went wrong. Try again.'
+      reply: 'Something went wrong. Try again.'
     });
+
   }
 }
+    
