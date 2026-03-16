@@ -14,68 +14,83 @@ const isLang = (v: string | null): v is Lang =>
 
 const SHOW_REVIEWER_UI = false;
 
-const L: Record<Lang, {
-  title: string;
-  email: string;
-  send: string;
-  sent: string;
-  hint: string;
-  back: string;
-  guest: string;
-  reviewerEmail: string;
-  password: string;
-  signinpw: string;
-}> = {
+const L: Record<
+  Lang,
+  {
+    title: string;
+    email: string;
+    code: string;
+    send: string;
+    verify: string;
+    sent: string;
+    hint: string;
+    back: string;
+    guest: string;
+    reviewerEmail: string;
+    password: string;
+    signinpw: string;
+magicLink: string;
+  }
+> = {
   en: {
     title: 'Sign in',
     email: 'Email',
-    send: 'Email me a sign-in link',
-    sent: 'Check your email and tap the secure login link.',
-    hint: 'Enter your email and we’ll send you a magic link to sign in.',
+    code: 'Verification code',
+    send: 'Send login code',
+    verify: 'Verify code',
+    sent: 'Check your email for the login code.',
+    hint: "Enter your email and we'll send you a login code.",
     back: '← Back to home',
     guest: 'Continue as guest',
     reviewerEmail: 'Reviewer access email',
     password: 'Password (reviewers only)',
     signinpw: 'Sign in with password',
+magicLink: 'Or click the link in your email',
   },
-
   pt: {
     title: 'Entrar',
     email: 'E-mail',
-    send: 'Enviar link de acesso',
-    sent: 'Verifique seu e-mail e toque no link seguro.',
-    hint: 'Digite seu e-mail e enviaremos um link mágico para entrar.',
+    code: 'Código de verificação',
+    send: 'Enviar código',
+    verify: 'Verificar código',
+    sent: 'Verifique seu e-mail para o código.',
+    hint: 'Digite seu e-mail e enviaremos um código de acesso.',
     back: '← Voltar ao início',
     guest: 'Continuar como visitante',
     reviewerEmail: 'E-mail do revisor',
     password: 'Senha (apenas revisores)',
     signinpw: 'Entrar com senha',
+magicLink: 'Ou clique no link no seu e-mail',
   },
-
   es: {
     title: 'Iniciar sesión',
     email: 'Correo',
-    send: 'Envíame un enlace de acceso',
-    sent: 'Revisa tu correo y toca el enlace seguro.',
-    hint: 'Ingresa tu correo y te enviaremos un enlace mágico.',
+    code: 'Código de verificación',
+    send: 'Enviar código',
+    verify: 'Verificar código',
+    sent: 'Revisa tu correo para el código.',
+    hint: 'Ingresa tu correo y enviaremos un código.',
     back: '← Volver al inicio',
     guest: 'Entrar como invitado',
     reviewerEmail: 'Correo del revisor',
     password: 'Contraseña (solo revisores)',
     signinpw: 'Entrar con contraseña',
+magicLink: 'O haz clic en el enlace de tu correo',
   },
-
   fr: {
     title: 'Connexion',
     email: 'E-mail',
-    send: 'M’envoyer un lien de connexion',
-    sent: 'Vérifiez votre e-mail et ouvrez le lien sécurisé.',
-    hint: 'Entrez votre e-mail et nous vous enverrons un lien magique.',
-    back: '← Retour à l’accueil',
+    code: 'Code de vérification',
+    send: 'Envoyer le code',
+    verify: 'Vérifier le code',
+    sent: 'Vérifiez votre e-mail pour le code.',
+    hint: 'Entrez votre e-mail et recevez un code.',
+    back: '← Retour à l\'accueil',
     guest: 'Continuer en invité',
     reviewerEmail: 'E-mail du réviseur',
     password: 'Mot de passe (réviseurs uniquement)',
     signinpw: 'Se connecter avec mot de passe',
+magicLink: 'Ou cliquez sur le lien dans votre e-mail',
   },
 };
 
@@ -88,26 +103,47 @@ function PageInner() {
   const t = L[lang];
 
   const [magicEmail, setMagicEmail] = React.useState('');
+  const [code, setCode] = React.useState('');
   const [reviewerEmail, setReviewerEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [status, setStatus] = React.useState<'idle' | 'sent'>('idle');
   const [busy, setBusy] = React.useState(false);
 
-  async function sendMagicLink() {
-    if (!magicEmail.includes('@')) return;
+  async function sendCode() {
+  if (!magicEmail.includes('@')) return;
+  setBusy(true);
 
+  const { error } = await supabase.auth.signInWithOtp({
+    email: magicEmail,
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: `${window.location.origin}/dashboard?lang=${lang}`,
+    },
+  });
+
+  setBusy(false);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  setStatus('sent');
+}
+
+  async function verifyCode() {
+    if (!code) return;
     setBusy(true);
 
-    const { error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.verifyOtp({
       email: magicEmail,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?redirect=/dashboard&lang=${lang}`,
-      },
+      token: code,
+      type: 'email',
     });
 
     setBusy(false);
 
-    if (!error) setStatus('sent');
+    if (!error) {
+      router.replace(`/dashboard?lang=${lang}`);
+    }
   }
 
   async function reviewerLogin() {
@@ -127,75 +163,93 @@ function PageInner() {
   }
 
   return (
-  <div className="min-h-screen flex items-center justify-center px-6 bg-[#04060f]">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-[#04060f]">
+      <div className="w-full max-w-[360px] text-center">
 
-    <div className="w-full max-w-[360px] text-center">
+        <h1 className="text-3xl font-semibold mb-4 text-white">
+          {t.title}
+        </h1>
 
-      <h1 className="text-3xl font-semibold mb-4 text-white">
-        {t.title}
-      </h1>
+        {status === 'sent' ? (
+          <div className="flex flex-col gap-4">
+            <p className="text-gray-300">{t.sent}</p>
 
-      {status === 'sent' ? (
-        <p className="text-gray-300">{t.sent}</p>
-      ) : (
-        <div className="flex flex-col gap-4">
+            <input
+              type="text"
+              value={code}
+              placeholder={t.code}
+              onChange={(e) => setCode(e.target.value)}
+              disabled={busy}
+              className="w-full h-[70px] px-6 box-border rounded-[22px] bg-white text-black text-2xl md:text-xl outline-none"
+            />
 
-          <p className="text-sm text-gray-400">
-            {t.hint}
-          </p>
+           <button
+              onClick={verifyCode}
+              disabled={busy}
+              className="w-full h-[70px] px-6 box-border rounded-[22px] text-[#020617] font-bold text-[16px]"
+              style={{ background: 'linear-gradient(135deg,#8fa6ff 0%,#6f88ff 100%)' }}
+            >
+              {t.verify}
+            </button>
 
-        <input
-  type="email"
-  value={magicEmail}
-  placeholder={t.email}
-  onChange={(e) => setMagicEmail(e.target.value)}
-  disabled={busy}
-className="w-full h-[70px] px-6 box-border rounded-[22px] bg-white text-black text-2xl md:text-xl outline-none"
-/>
+            <p className="text-sm text-[#38bdf8] mt-2">{t.magicLink}</p>
 
-          <button
-            onClick={sendMagicLink}
-            disabled={busy}
-      className="w-full h-[70px] px-6 box-border rounded-[22px] text-[#020617] font-bold text-[16px]"
-            style={{
-              background: 'linear-gradient(135deg,#8fa6ff 0%,#6f88ff 100%)'
-            }}
-          >
-            {t.send}
-          </button>
-
-          <div className="flex items-center my-2">
-            <div className="flex-grow h-px bg-gray-700"></div>
-            <span className="px-3 text-xs text-gray-400">or</span>
-            <div className="flex-grow h-px bg-gray-700"></div>
           </div>
 
-          <button
-            onClick={guestLogin}
-            disabled={busy}
-            className="w-full py-4 rounded-[22px] border text-[#c9d4ff] text-[15px] font-semibold"
-            style={{
-              border: '1px solid rgba(130,160,255,0.45)',
-              background: 'rgba(10,15,28,0.6)'
-            }}
-          >
-            {t.guest}
-          </button>
+        ) : (
+          <div className="flex flex-col gap-4">
 
-        </div>
-      )}
+            <p className="text-sm text-gray-400">{t.hint}</p>
 
-      <Link
-        href={`/?lang=${lang}`}
-        className="block mt-6 text-sm text-blue-300 hover:text-blue-400"
-      >
-        {t.back}
-      </Link>
+            <input
+              type="email"
+              value={magicEmail}
+              placeholder={t.email}
+              onChange={(e) => setMagicEmail(e.target.value)}
+              disabled={busy}
+              className="w-full h-[70px] px-6 box-border rounded-[22px] bg-white text-black text-2xl md:text-xl outline-none"
+            />
 
+            <button
+              onClick={sendCode}
+              disabled={busy}
+              className="w-full h-[70px] px-6 box-border rounded-[22px] text-[#020617] font-bold text-[16px]"
+              style={{ background: 'linear-gradient(135deg,#8fa6ff 0%,#6f88ff 100%)' }}
+            >
+              {t.send}
+            </button>
+
+            <div className="flex items-center my-2">
+              <div className="flex-grow h-px bg-gray-700"></div>
+              <span className="px-3 text-xs text-gray-400">or</span>
+              <div className="flex-grow h-px bg-gray-700"></div>
+            </div>
+
+            <button
+              onClick={guestLogin}
+              disabled={busy}
+              className="w-full py-4 rounded-[22px] border text-[#c9d4ff] text-[15px] font-semibold"
+              style={{
+                border: '1px solid rgba(130,160,255,0.45)',
+                background: 'rgba(10,15,28,0.6)',
+              }}
+            >
+              {t.guest}
+            </button>
+
+          </div>
+        )}
+
+        <Link
+          href={`/?lang=${lang}`}
+          className="block mt-6 text-sm text-blue-300 hover:text-blue-400"
+        >
+          {t.back}
+        </Link>
+
+      </div>
     </div>
-
-  </div>
-);
+  );
 }
 
 export default function Page() {

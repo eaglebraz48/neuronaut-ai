@@ -620,116 +620,109 @@ const handleDelete = async () => {
 // First useEffect - Check initial session on page load
 useEffect(() => {
   const initializeUser = async () => {
+  try {
+    // ✅ ALWAYS check session first, before any guest logic
+    const { data } = await supabase.auth.getSession();
+    const session = data?.session;
 
-    try {
-     
-   if (isGuestMode()) {
-  setIsGuest(true);
-  setPhase('profile');
-  setStep(1); // force onboarding start
-  setShowDisclaimer(true);
-  setHasAcceptedTerms(false);
-  setChecked(true);
-  return;
-}
-      
-      const { data } = await supabase.auth.getSession();
-      const session = data?.session;
-      
-     if (session?.user) {
-  const uid = session.user.id;
-  const email = session.user.email ?? null;
+    // If we have a real session, skip guest mode entirely
+    if (session?.user) {
+      const uid = session.user.id;
+      const email = session.user.email ?? null;
 
-  setUserId(uid);
-  setUserEmail(email);
-// ensure profile row exists
-await supabase.from('profiles')
-  .upsert(
-    { user_id: uid, email: email },
-    { onConflict: 'user_id', ignoreDuplicates: true }
- 
-);
-  // 🔥 LOAD USER PROFILE
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, country, pronoun, onboarding_completed')
-   .or(`user_id.eq.${uid},id.eq.${uid}`)
-.single();
+      setUserId(uid);
+      setUserEmail(email);
 
-if (profile) {
-  setName(profile.name || '');
-  setCountry(profile.country || '');
-  setPronoun(profile.pronoun || null);
-}
+      await supabase.from('profiles')
+        .upsert(
+          { user_id: uid, email: email },
+          { onConflict: 'user_id', ignoreDuplicates: true }
+        );
 
-/* ⭐ STEP 2 — detect new vs returning user */
-const isNewUser = !profile?.onboarding_completed;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, country, pronoun, onboarding_completed')
+        .or(`user_id.eq.${uid},id.eq.${uid}`)
+        .single();
 
-/* save to state (used later when confirming) */
-setIsFirstTimeUser(isNewUser);
-
-/* everyone goes to confirm screen */
-setPhase('confirming');
-
-  const hasAccepted = await checkTermsAcceptance(uid);
-  setHasAcceptedTerms(hasAccepted);
-  setShowDisclaimer(!hasAccepted);
-
-  // 🔥 Load latest session recap
-  const { data: latestRecap } = await supabase
-    .from('session_recaps')
-    .select('recap')
-    .eq('user_id', uid)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  // 🔥 CHECK if login note already exists
-  const { data: existing } = await supabase
-    .from('working_notes')
-    .select('id')
-    .eq('user_id', uid)
-    .eq('source', 'login')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  // 🔥 Insert login refresh note ONLY if missing
-  if (!existing && latestRecap?.recap) {
-    await supabase.from('working_notes').insert({
-      user_id: uid,
-      content: `Session restarted. Last session summary: ${latestRecap.recap}`,
-      source: 'login',
-      created_at: new Date().toISOString(),
-    });
-  }
-
-  // Load past notes for returning users
-  const { data: notesData } = await supabase
-    .from('working_notes')
-    .select('content')
-    .eq('user_id', uid)
-    .order('created_at', { ascending: false })
-    .limit(6);
-
-  if (notesData && notesData.length > 0) {
-    setNotes(notesData.map(n => n.content));
-  }
-
-  setPhase('confirming');
-} else {
-        setPhase('guided');
-        setShowDisclaimer(true);
-        setHasAcceptedTerms(false);
+      if (profile) {
+        setName(profile.name || '');
+        setCountry(profile.country || '');
+        setPronoun(profile.pronoun || null);
       }
-      
+
+      const isNewUser = !profile?.onboarding_completed;
+      setIsFirstTimeUser(isNewUser);
+      setPhase('confirming');
+
+      const hasAccepted = await checkTermsAcceptance(uid);
+      setHasAcceptedTerms(hasAccepted);
+      setShowDisclaimer(!hasAccepted);
+
+      const { data: latestRecap } = await supabase
+        .from('session_recaps')
+        .select('recap')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      const { data: existing } = await supabase
+        .from('working_notes')
+        .select('id')
+        .eq('user_id', uid)
+        .eq('source', 'login')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!existing && latestRecap?.recap) {
+        await supabase.from('working_notes').insert({
+          user_id: uid,
+          content: `Session restarted. Last session summary: ${latestRecap.recap}`,
+          source: 'login',
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      const { data: notesData } = await supabase
+        .from('working_notes')
+        .select('content')
+        .eq('user_id', uid)
+        .order('created_at', { ascending: false })
+        .limit(6);
+
+      if (notesData && notesData.length > 0) {
+        setNotes(notesData.map(n => n.content));
+      }
+
       setChecked(true);
-    } catch (error) {
-      console.error('Error initializing user:', error);
-      setPhase('profile');
-      setChecked(true);
+      return;
     }
-  };
+
+    // ✅ Only fall into guest mode if truly no session
+    if (isGuestMode()) {
+      setIsGuest(true);
+      setPhase('profile');
+      setStep(1);
+      setShowDisclaimer(true);
+      setHasAcceptedTerms(false);
+      setChecked(true);
+      return;
+    }
+
+    // No session, no guest → guided flow
+    setPhase('guided');
+    setShowDisclaimer(true);
+    setHasAcceptedTerms(false);
+    setChecked(true);
+
+  } catch (error) {
+    console.error('Error initializing user:', error);
+    setPhase('profile');
+    setChecked(true);
+  }
+};
   
   initializeUser();
 }, [sp]);
@@ -931,21 +924,19 @@ const isReviewer = sp.get('reviewer') === '1';
   style={{
     position: 'fixed',
 
-    left: isMobile ? '50%' : 300,
+    left: isMobile ? '75%' : 300,
     transform: isMobile ? 'translateX(-50%)' : 'none',
 
-    bottom: isMobile ? 140 : 'auto',
-    top: isMobile ? 'auto' : 160,
+    top: isMobile ? 50 : 160,
 
     display: 'flex',
     gap: 4,
     alignItems: 'center',
     height: 24,
 
-    zIndex: 50,
+    zIndex: 4,
   }}
 >
-
   {Array.from({ length: 12 }).map((_, i) => (
     <div
       key={i}

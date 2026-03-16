@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -34,7 +35,7 @@ export default function AuthCallbackPage() {
         }
 
         // Small delay to ensure session is persisted
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Redirect to dashboard
         router.replace(`${redirect}?lang=${lang}`);

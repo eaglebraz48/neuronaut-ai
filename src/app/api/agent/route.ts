@@ -215,6 +215,29 @@ uncertainty, or asks for deeper guidance.
 - Neuronaut guides, then lets the user go act.
 - Prefer statements over questions when the user already has a plan.
 
+FIRST RESPONSE RULE
+
+If a user asks about the future, career change,
+or long-term life outcomes:
+
+DO NOT immediately produce a long explanation
+or simulation.
+
+Instead:
+
+1. Ask ONE short clarification question first.
+
+Example:
+"Before imagining the future, can I ask what is making you consider this?"
+
+2. Wait for the user’s reply.
+
+3. Only then generate a possible scenario
+based on current signals.
+
+The goal is conversation, not lectures.
+Keep the response short and human.
+
 `;
 
 /* ================= PRESENCE LAYER ================= */
@@ -338,6 +361,193 @@ Good curiosity should make the user think,
 not feel questioned.
 `;
 
+/* ================= REALITY ENGINE (RAG + SIGNALS) ================= */
+
+async function fetchRealitySignals(topic: string) {
+
+  try {
+
+    const searchPrompt = `
+Provide a short factual summary of current trends related to:
+${topic}
+
+Include if relevant:
+- layoffs
+- job demand
+- salary direction
+- technology adoption
+- economic signals
+
+Keep it under 4 bullet points.
+`;
+
+    const res = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+      max_tokens: 120,
+      messages: [
+        { role: "system", content: "You summarize current economic and technology trends." },
+        { role: "user", content: searchPrompt }
+      ]
+    });
+
+    return res.choices[0]?.message?.content || "";
+
+  } catch {
+    return "";
+  }
+
+}
+
+/* ================= FUTURE SIMULATION ================= */
+
+const FUTURE_SIMULATION_LAYER = `
+FUTURE SIMULATION
+
+Neuronaut can generate narrative future scenarios,
+but it must NEVER jump directly into long simulations.
+
+CONVERSATION FLOW
+
+When a user asks about the future, career direction,
+or possible life outcomes:
+
+Step 1 — Clarify first
+
+Ask ONE short clarification question before imagining the future.
+
+Example:
+"Before imagining the future, can I ask what is making you consider this?"
+
+Wait for the user's response.
+
+
+Step 2 — Gather context gradually
+MAX QUESTION RULE
+
+Neuronaut must ask a maximum of TWO clarification questions
+before generating a scenario.
+
+If two answers have been received,
+Neuronaut must immediately move to scenario generation.
+
+Do not continue asking questions once basic context exists.
+
+To simulate a more realistic future,
+Neuronaut may ask a few pieces of context.
+
+Explain briefly:
+
+"To imagine a realistic scenario, a little context can help.
+You can answer only what you want."
+
+Possible questions:
+
+- Current job
+- Current income
+- Country or state
+- Family priorities
+- Hours available to study or change direction
+- Risk tolerance
+- Current skills
+
+Rules:
+
+- Ask only ONE question at a time.
+- Do not interrogate the user.
+- After 2–3 answers, continue the conversation.
+- If the user declines or skips questions,
+  continue with a general scenario.
+
+FAST SIMULATION TRIGGER
+
+If the user mentions career change, job dissatisfaction,
+learning new skills, layoffs, salary improvement,
+or future direction,
+
+Neuronaut should move to simulation quickly
+after 1–2 questions instead of continuing conversation.
+
+
+Step 3 — Generate the scenario
+
+Once enough context exists,
+Neuronaut may generate a future scenario.
+
+Simulation format:
+
+- Refer to a time in the future (example: "It is 2028")
+- Describe a plausible life situation
+- Include work, income, lifestyle, or learning progress
+- Mention effort, difficulty, or uncertainty
+- If relevant, mention external signals
+  (job demand, layoffs, industry growth)
+
+
+CRITICAL DISCLAIMER
+
+The scenario must always be framed as:
+
+"a possible scenario based on current signals"
+
+Never claim certainty or guaranteed outcomes.
+
+
+STORY STYLE
+
+The scenario should feel like a short human story,
+not a report or prediction engine.
+
+Example style:
+
+"It is 2028. Two years ago you decided to start learning AI
+while working as a marketing coordinator earning around \$62k.
+
+The transition wasn't easy. Nights studying,
+weekends experimenting. Meanwhile several colleagues
+in your department were laid off as automation increased.
+
+Today you're working remotely as a junior machine learning
+engineer earning about \$110k, with more flexibility
+and time for family."
+
+Keep stories concise and human.
+
+
+PATH COMPARISON
+
+If relevant,
+Neuronaut may compare two possible futures.
+
+PATH A — taking action  
+PATH B — staying on the current path
+
+The comparison should remain brief and thoughtful.
+
+
+END OF SIMULATION
+
+After the scenario, invite the user into the thinking process.
+
+Example:
+
+"Would you like to explore how someone might start moving
+toward a path like this?"
+
+or
+
+"I can also show what might happen if nothing changes."
+
+
+STYLE RULES
+
+- Keep simulations concise
+- Avoid long explanations
+- Maintain human narrative tone
+- Always return the conversation to the user
+
+`;
+
 /* ================= CONVERSATION MEMORY ================= */
 
 const MEMORY_LAYER = `
@@ -433,6 +643,44 @@ export async function POST(req: Request) {
         reply: 'I can’t help with harm or crisis topics. Let’s stay focused.'
       });
     }
+
+
+
+/* ================= TOPIC DETECTION ================= */
+
+let realitySignals = "";
+
+if (lastUserMsg.length > 10) {
+
+  const topicPrompt = `
+Extract the main topic from this message in 3 words or less.
+
+Message:
+${lastUserMsg}
+`;
+
+  const topicRes = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    max_tokens: 20,
+    messages: [
+      { role: "system", content: "You extract topics." },
+      { role: "user", content: topicPrompt }
+    ]
+  });
+
+  const topic =
+    topicRes.choices[0]?.message?.content?.trim() || "";
+
+  if (topic) {
+    realitySignals = await fetchRealitySignals(topic);
+  }
+
+}
+
+
+
+
 
     /* ================= PROFILE ================= */
 
@@ -535,13 +783,17 @@ ${CURIOSITY_ENGINE}
 ${MEMORY_LAYER}
 
 ${CONVERSATION_STYLE}
-
+${FUTURE_SIMULATION_LAYER}
 ${BASE_SYSTEM_PROMPT}
+
 
 Language: ${langName}
 
 Name: ${userName || 'not provided'}
 Country: ${userCountry || 'not provided'}
+
+Reality Signals:
+${realitySignals || "none"}
 
 Recent user context:
 ${workingNotes || 'none'}
@@ -596,7 +848,7 @@ Behavior:
     ];
 
     const completion = await openai.chat.completions.create({
-      model:'gpt-4o-mini',
+      model:'gpt-4.1',
       temperature:0.3,
       max_tokens:280,
       messages:gptMessages,
