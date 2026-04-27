@@ -104,6 +104,8 @@ RULES:
 - Human tone.
 - Do not over explain.
 
+
+
 GUIDANCE MODE:
 
 When a user mentions a goal, intention, or idea,
@@ -237,6 +239,50 @@ based on current signals.
 
 The goal is conversation, not lectures.
 Keep the response short and human.
+
+DECISION ENGINE (CRITICAL)
+
+When user expresses doubt, comparison, or problem:
+
+Always structure response like:
+
+Situation:
+- identify what the user is deciding
+
+Option A:
+- short outcome
+
+Option B:
+- short outcome
+
+Insight:
+- what usually happens in real life (based on experience level if mentioned)
+
+Question:
+- one direct question
+
+RULES:
+- max 6 lines
+- no long paragraphs
+- be direct
+- guide decision, not just reflect
+
+LENGTH CONTROL:
+
+- Maximum 5–6 lines
+- Avoid long explanations
+- Break into short lines
+
+CONVERSATION LIMIT:
+
+After 2–3 exchanges:
+
+- suggest user to take time to think
+- suggest returning in 24–48 hours
+
+If user keeps going:
+- ask max 2 more questions
+- then summarize briefly and close direction
 
 `;
 
@@ -638,6 +684,9 @@ export async function POST(req: Request) {
     const lastUserMsg =
       [...messages].reverse().find(m => m.role === 'user')?.text || '';
 
+const voiceTrigger =
+  /voz|voice|sound|mudou sua voz|changed voice/i.test(lastUserMsg);
+
     if (containsBlockedContent(lastUserMsg)) {
       return NextResponse.json({
         reply: 'I can’t help with harm or crisis topics. Let’s stay focused.'
@@ -680,70 +729,32 @@ ${lastUserMsg}
 
 
 
+/* ================= PROFILE ================= */
+
+let userName: string | null = null;
+let userCountry: string | null = null;
+let workingNotes = '';
+
+if (context?.userId) {
+
+  userName = context.name || null;
+  userCountry = context.country || null;
 
 
-    /* ================= PROFILE ================= */
+  
+  /* ================= WORKING NOTES ================= */
 
-    let userName: string | null = null;
-    let userCountry: string | null = null;
-    let workingNotes = '';
+  const { data: notes } = await supabase
+    .from('working_notes')
+    .select('content')
+    .eq('user_id', context.userId)
+    .order('created_at', { ascending: false })
+    .limit(10);
 
-    if (context?.userId) {
-
-      userName = context.name || null;
-      userCountry = context.country || null;
-
-      if (!userName || !userCountry) {
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('name, country')
-          .or(`user_id.eq.${context.userId},id.eq.${context.userId}`)
-          .single();
-
-        if (profile) {
-          userName = userName || profile.name || null;
-          userCountry = userCountry || profile.country || null;
-        }
-      }
-
-      /* name capture */
-
-      if (!userName && lastUserMsg) {
-
-        const match =
-          lastUserMsg.match(/\b(my name is|i'm|im|i am|me chamo|eu sou)\s+([A-Za-zÀ-ÿ' -]{2,40})\b/i);
-
-        const extracted = match?.[2]?.trim();
-
-        if (extracted) {
-
-          userName = extracted;
-
-          await supabase
-            .from('profiles')
-            .upsert(
-              { user_id: context.userId, name: extracted },
-              { onConflict: 'user_id' }
-            );
-        }
-      }
-
-      /* working notes */
-
-      const { data: notes } = await supabase
-        .from('working_notes')
-        .select('content')
-        .eq('user_id', context.userId)
-        .order('created_at', { ascending:false })
-        .limit(10);
-
-      if (notes?.length) {
-        workingNotes = notes.map(n => n.content).join('\n');
-      }
-
-    }
-
+  if (notes?.length) {
+    workingNotes = notes.map(n => n.content).join('\n');
+  }
+}
     /* ================= MEMORY ================= */
 
     let continuity = '';
@@ -796,6 +807,23 @@ Reality Signals:
 ${realitySignals || "none"}
 
 Recent user context:
+CONTEXT PRIORITY:
+
+Always combine:
+- emotional state (mood)
+- topic (reason)
+
+Never answer using only one.
+Always connect both.
+
+FOCUS RULE:
+
+Do not drift away from the user's problem.
+
+Always:
+- stay on topic
+- move toward decision or clarity
+
 ${workingNotes || 'none'}
 
 ${continuity}
@@ -826,6 +854,13 @@ Behavior:
 
     /* ================= GPT INPUT ================= */
 
+if (voiceTrigger) {
+  return NextResponse.json({
+    reply:
+      "Tenho várias vozes e vou ajustando conforme a conversa. Ainda estamos melhorando — por enquanto é grátis. No futuro você poderá escolher vozes diferentes, até algo mais personalizado."
+  });
+}
+
     const gptMessages: any[] = [
       { role:'system', content: systemPrompt },
 
@@ -850,7 +885,7 @@ Behavior:
     const completion = await openai.chat.completions.create({
       model:'gpt-4.1',
       temperature:0.3,
-      max_tokens:280,
+      max_tokens:150,
       messages:gptMessages,
     });
 

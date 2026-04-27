@@ -1,9 +1,17 @@
-'use client';
+/*REPEATING USER OFF, VOICE ON (WILL TURN IT OFF), STABLE*/
+
+  'use client';
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import DisclaimerModal from '@/components/DisclaimerModal';
+import { onForegroundMessage } from '@/lib/push';
+import { requestNotificationPermission } from '@/lib/push';
+import { getToken } from 'firebase/messaging';
+import { getMessagingSafe } from '@/lib/firebase';
+
+
 
 let voiceCooldown = false;
 
@@ -21,11 +29,13 @@ type ChatMessage = {
 };
 
 type CopySchema = {
+
+qMood: string;
   voiceOn: string;
   voiceOff: string;
   voiceTurnOn: string;
   voiceTurnOff: string;
-
+voiceTip: string;
   listening: string;
   back: string;
   guest: string;
@@ -35,6 +45,11 @@ type CopySchema = {
 
   confirmTitle: string;
   confirmBtn: string;
+
+notifyTitle: string;
+notifyBody: string;
+notifyAllow: string;
+notifyLater: string;
 
   nameTitle: string;
   namePlaceholder: string;
@@ -48,7 +63,24 @@ type CopySchema = {
   send: string;
   typing: string;
 
-  notesTitle: string;
+moodSelected: (mood: string) => string;
+alertChoosePicture: string;
+alertChooseReason: string;
+
+dissatisfied: string;
+neutral: string;
+hopeful: string;
+thriving: string;
+
+reason_work: string;
+reason_finance: string;
+reason_future: string;
+reason_skills: string;
+reason_talk: string;
+
+compareOrAsk: string;
+
+notesTitle: string;
   notesEmpty: string;
 
   q1: string;
@@ -90,6 +122,7 @@ const COPY: Record<Lang, CopySchema> = {
     voiceOff: '🔇 Voice Off',
     voiceTurnOn: 'turn on',
     voiceTurnOff: 'turn off',
+voiceTip: '🔊 Voice is ON. You can turn it off anytime.',
 
     listening: 'Agent AI · Listening',
     back: 'Back to start',
@@ -101,22 +134,44 @@ const COPY: Record<Lang, CopySchema> = {
     confirmTitle: 'Welcome',
     confirmBtn: 'Enter',
 
+notifyTitle: 'Stay informed',
+notifyBody: 'Get notified when your Neuronaut analysis is ready.',
+notifyAllow: 'Allow notifications',
+notifyLater: 'Not now',
+
     nameTitle: 'How should I address you?',
     namePlaceholder: 'Your name',
+
 
     pronounNeutral: 'Use neutral language',
     pronounThey: 'They / them',
     pronounHe: 'He / him',
     pronounShe: 'She / her',
 
+dissatisfied: "Dissatisfied",
+neutral: "Neutral",
+hopeful: "Hopeful",
+thriving: "Thriving",
+
+reason_work: 'work',
+reason_finance: 'finances',
+reason_future: 'future',
+reason_skills: 'skills',
+reason_talk: 'conversation',
+
+compareOrAsk: 'Want to compare or ask something?',
+
     startTalking: 'Start typing',
     send: 'Send',
     typing: 'typing…',
-
+moodSelected: (mood) => `You selected ${mood}. Tell me what is happening.`,
+alertChoosePicture: "Choose a picture first.",
+alertChooseReason: "Now choose the reason (work, finances, etc).",
     notesTitle: 'Working Notes',
     notesEmpty: '(waiting for conversation…)',
 
     q1: 'What do you want help with today?',
+qMood: 'Which picture feels closest to your current situation?',
     q1_work: 'Work or job',
     q1_finance: 'Money or finances',
     q1_future: 'Future direction',
@@ -167,6 +222,7 @@ const COPY: Record<Lang, CopySchema> = {
     voiceOff: '🔇 Voz desligada',
     voiceTurnOn: 'ligar',
     voiceTurnOff: 'desligar',
+voiceTip: '🔊 A voz está ligada. Você pode desligar quando quiser.',
 
     listening: 'Agente AI · Ouvindo',
     back: 'Voltar ao início',
@@ -178,6 +234,11 @@ const COPY: Record<Lang, CopySchema> = {
     confirmTitle: 'Bem-vindo',
     confirmBtn: 'Entrar',
 
+notifyTitle: 'Fique por dentro',
+notifyBody: 'Receba notificações quando sua análise estiver pronta.',
+notifyAllow: 'Permitir notificações',
+notifyLater: 'Agora não',
+
     nameTitle: 'Como devo te chamar?',
     namePlaceholder: 'Seu nome',
 
@@ -186,14 +247,30 @@ const COPY: Record<Lang, CopySchema> = {
     pronounHe: 'Ele / dele',
     pronounShe: 'Ela / dela',
 
+dissatisfied: "Insatisfeito",
+neutral: "Neutro",
+hopeful: "Esperançoso",
+thriving: "Prosperando",
+
+reason_work: 'trabalho',
+reason_finance: 'finanças',
+reason_future: 'futuro',
+reason_skills: 'habilidades',
+reason_talk: 'conversa',
+
+compareOrAsk: 'Quer comparar algo ou tirar uma dúvida?',
+
     startTalking: 'Comece a digitar',
     send: 'Enviar',
     typing: 'digitando…',
-
+moodSelected: (mood) => `Você escolheu ${mood}. Me conta o que está acontecendo.`,
+alertChoosePicture: "Escolha uma imagem primeiro.",
+alertChooseReason: "Agora escolha o motivo (trabalho, finanças, etc).",
     notesTitle: 'Anotações',
     notesEmpty: '(aguardando conversa…)',
 
     q1: 'O que você quer resolver hoje?',
+qMood: 'Qual imagem representa melhor sua situação atual?',
     q1_work: 'Trabalho',
     q1_finance: 'Dinheiro ou finanças',
     q1_future: 'Direção do futuro',
@@ -244,6 +321,7 @@ const COPY: Record<Lang, CopySchema> = {
     voiceOff: '🔇 Voz desactivada',
     voiceTurnOn: 'encender',
     voiceTurnOff: 'apagar',
+voiceTip: '🔊 La voz está activada. Puedes apagarla en cualquier momento.',
 
     listening: 'Agente AI · Escuchando',
     back: 'Volver',
@@ -255,6 +333,11 @@ const COPY: Record<Lang, CopySchema> = {
     confirmTitle: 'Bienvenido',
     confirmBtn: 'Entrar',
 
+notifyTitle: 'Mantente informado',
+notifyBody: 'Recibe notificaciones cuando tu análisis esté listo.',
+notifyAllow: 'Permitir notificaciones',
+notifyLater: 'Ahora no',
+
     nameTitle: '¿Cómo te llamo?',
     namePlaceholder: 'Tu nombre',
 
@@ -263,14 +346,31 @@ const COPY: Record<Lang, CopySchema> = {
     pronounHe: 'Él',
     pronounShe: 'Ella',
 
+dissatisfied: "Insatisfecho",
+neutral: "Neutral",
+hopeful: "Esperanzado",
+thriving: "Prosperando",
+
+reason_work: 'trabajo',
+reason_finance: 'finanzas',
+reason_future: 'futuro',
+reason_skills: 'habilidades',
+reason_talk: 'conversación',
+
+compareOrAsk: '¿Quieres comparar algo o hacer una pregunta?',
+
+
     startTalking: 'Empieza a escribir',
+moodSelected: (mood) => `Elegiste ${mood}. Cuéntame qué está pasando.`,
     send: 'Enviar',
     typing: 'escribiendo…',
-
+alertChoosePicture: "Primero elige una imagen.",
+alertChooseReason: "Ahora elige el motivo (trabajo, finanzas, etc).",
     notesTitle: 'Notas',
     notesEmpty: '(esperando conversación…)',
 
     q1: '¿Qué tienes en mente hoy?',
+qMood: '¿Qué imagen se acerca más a tu situación actual?',
     q1_work: 'Trabajo',
     q1_finance: 'Dinero',
     q1_future: 'Mi futuro',
@@ -306,6 +406,7 @@ const COPY: Record<Lang, CopySchema> = {
     voiceOff: '🔇 Voix désactivée',
     voiceTurnOn: 'activer',
     voiceTurnOff: 'désactiver',
+voiceTip: '🔊 La voix est activée. Vous pouvez la désactiver à tout moment.',
 
     listening: 'Agent AI · À l’écoute',
     back: 'Retour',
@@ -317,6 +418,11 @@ const COPY: Record<Lang, CopySchema> = {
     confirmTitle: 'Bienvenue',
     confirmBtn: 'Entrer',
 
+notifyTitle: 'Restez informé',
+notifyBody: 'Recevez des notifications quand votre analyse est prête.',
+notifyAllow: 'Autoriser les notifications',
+notifyLater: 'Pas maintenant',
+
     nameTitle: 'Comment dois-je t’appeler ?',
     namePlaceholder: 'Ton prénom',
 
@@ -325,14 +431,31 @@ const COPY: Record<Lang, CopySchema> = {
     pronounHe: 'Il',
     pronounShe: 'Elle',
 
+dissatisfied: "Insatisfait",
+neutral: "Neutre",
+hopeful: "Plein d’espoir",
+thriving: "Épanoui",
+
+reason_work: 'travail',
+reason_finance: 'finances',
+reason_future: 'avenir',
+reason_skills: 'compétences',
+reason_talk: 'conversation',
+
+compareOrAsk: 'Voulez-vous comparer quelque chose ou poser une question ?',
+
+
     startTalking: 'Commence à écrire',
+moodSelected: (mood) => `Vous avez choisi ${mood}. Dites-moi ce qui se passe.`,
     send: 'Envoyer',
     typing: 'écrit…',
-
+alertChoosePicture: "Choisissez une image d'abord.",
+alertChooseReason: "Choisissez maintenant la raison (travail, finances, etc).",
     notesTitle: 'Notes',
     notesEmpty: '(en attente…)',
 
     q1: 'Qu’as-tu en tête aujourd’hui ?',
+qMood: 'Quelle image correspond le mieux à votre situation actuelle ?',
     q1_work: 'Travail',
     q1_finance: 'Argent',
     q1_future: 'Mon avenir',
@@ -363,9 +486,12 @@ const COPY: Record<Lang, CopySchema> = {
   },
 };
 
+
+
+
 const TERMS_VERSION = '2026-01-02';
 /* ================= COMPONENT ================= */
-export default function DashboardClient() {
+export default function DashboardClientNotes() {
   const sp = useSearchParams();
   const router = useRouter();
   const lang = (sp.get('lang') as Lang) || 'en';
@@ -374,9 +500,14 @@ const isGuestMode = () =>
   sp.get('guest') === '1';
   const T = COPY[lang];
 
+const [notifAsked, setNotifAsked] = useState(false);
+const [showNotifModal, setShowNotifModal] = useState(false);
+const [showIOSFix, setShowIOSFix] = useState(false);
+const [showVoiceTip, setShowVoiceTip] = useState(false);
 
   const [phase, setPhase] = useState<Phase>('confirming');
   const [reason, setReason] = useState<Reason>(null);
+const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [checked, setChecked] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
@@ -385,6 +516,11 @@ const isGuestMode = () =>
 const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 const [skipGuidedAfterProfile, setSkipGuidedAfterProfile] = useState(false);
 const [name, setName] = useState('');
+
+const isStandalone =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(display-mode: standalone)').matches;
+
 
 const cleanName =
   typeof name === 'string' && name.trim().length > 0
@@ -404,6 +540,7 @@ const displayName =
   'there';
 const [country, setCountry] = useState('');
 const [voiceOn, setVoiceOn] = useState(true);
+
 const [voiceUses, setVoiceUses] = useState(0);
 const [aiSpeaking, setAiSpeaking] = useState(false);
 const [waveTick, setWaveTick] = useState(0);
@@ -476,6 +613,15 @@ const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [notes, setNotes] = useState<string[]>([]);
+
+const moods = [
+  { id: "dissatisfied", src: "/moods/mood_dissatisfied.png", label: "Dissatisfied" },
+  { id: "neutral", src: "/moods/mood_neutral.png", label: "Neutral" },
+  { id: "hopeful", src: "/moods/mood_hopeful.png", label: "Hopeful" },
+  { id: "thriving", src: "/moods/mood_thriving.png", label: "Thriving" },
+];
+
+
 const [aiReplyCount, setAiReplyCount] = useState(0);
 const [showCalmNote, setShowCalmNote] = useState(false);
 
@@ -574,40 +720,33 @@ const [showCalmNote, setShowCalmNote] = useState(false);
         setShowDisclaimer(false);
       }
     } else {
-      // Guest mode - create anonymous terms acceptance record only
-      const guestId = generateGuestId();
-      
-      try {
-        const { error } = await supabase
-          .from('terms_acceptance')
-          .insert({
-            user_id: guestId,
-            terms_version: TERMS_VERSION,
-            accepted_at: new Date().toISOString(),
-          });
+     
+  const guestId = generateGuestId();
 
-        if (error) {
-          console.error('Error logging guest acceptance:', error);
-        }
-      } catch (err) {
-        console.error('Error logging guest acceptance:', err);
-      } finally {
-        setHasAcceptedTerms(true);
-        setShowDisclaimer(false);
-      }
-    }
-  };
-const handleDelete = async () => {
+  try {
+    // 🚫 desativado para evitar erro 400
+  } catch (err) {
+    console.error('Error logging guest acceptance:', err);
+  } finally {
+    setHasAcceptedTerms(true);
+    setShowDisclaimer(false);
+  }
+}
+  };const handleDelete = async () => {
   const isReviewer = sp.get('reviewer') === '1';
-
   if (isReviewer) {
-    alert('Review mode — do not delete this account.\n\nThis popup demonstrates what users would see when deleting.');
+    alert('Review mode — do not delete this account.');
     return;
   }
-
   if (!confirm('Delete account and all stored data?')) return;
 
-  const res = await fetch('/api/delete-account', { method: 'POST' });
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+
+  const res = await fetch('/api/delete-account', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const json = await res.json();
 
   if (json.ok) {
@@ -617,64 +756,95 @@ const handleDelete = async () => {
 };
 
 
+
+
 // First useEffect - Check initial session on page load
+
 useEffect(() => {
-  const initializeUser = async () => {
+  if (showVoiceTip) {
+    const t = setTimeout(() => setShowVoiceTip(false), 15000);
+    return () => clearTimeout(t);
+  }
+}, [showVoiceTip]);
+
+
+
+useEffect(() => {
+
+const initializeUser = async () => {
+setChecked(false); // 🔥 reset loading state
   try {
-    // ✅ ALWAYS check session first, before any guest logic
-    const { data } = await supabase.auth.getSession();
-    const session = data?.session;
 
-    // If we have a real session, skip guest mode entirely
-    if (session?.user) {
-      const uid = session.user.id;
-      const email = session.user.email ?? null;
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+      if (accessToken && refreshToken) {
+        await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      }
 
-      setUserId(uid);
-      setUserEmail(email);
+    }
 
-      await supabase.from('profiles')
-        .upsert(
-          { user_id: uid, email: email },
-          { onConflict: 'user_id', ignoreDuplicates: true }
-        );
+    await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
+if (user) {
+  const uid = user.id;
+  const email = user.email ?? null;
+
+  setUserId(uid);
+  setUserEmail(email);
+
+  // 🔥 THIS is the missing piece
+  const hasAccepted = await checkTermsAcceptance(uid);
+
+  setHasAcceptedTerms(hasAccepted);
+  setShowDisclaimer(!hasAccepted);
+  setShowVoiceTip(true);
+
+  // 👇 keep everything else BELOW this
+
+
+const { data: existingProfile } = await supabase
+  .from('profiles')
+  .select('user_id')
+  .eq('user_id', uid)
+  .maybeSingle();
+
+if (!existingProfile) {
+  await supabase.from('profiles').insert({
+    user_id: uid,
+    email,
+  
+    onboarding_completed: true,
+    updated_at: new Date().toISOString(),
+  });
+}
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, country, pronoun, onboarding_completed')
-        .or(`user_id.eq.${uid},id.eq.${uid}`)
-        .single();
+        .select('name, country, pronoun, onboarding_completed, fcm_token')
+        .eq('user_id', uid)
+        .maybeSingle();
 
       if (profile) {
         setName(profile.name || '');
         setCountry(profile.country || '');
         setPronoun(profile.pronoun || null);
+      } else {
+        setName(''); setCountry(''); setPronoun(null);
       }
 
-      const isNewUser = !profile?.onboarding_completed;
-      setIsFirstTimeUser(isNewUser);
-      setPhase('confirming');
+     setIsFirstTimeUser(false);
+    setPhase('guided');
 
-      const hasAccepted = await checkTermsAcceptance(uid);
-      setHasAcceptedTerms(hasAccepted);
-      setShowDisclaimer(!hasAccepted);
 
       const { data: latestRecap } = await supabase
-        .from('session_recaps')
-        .select('recap')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .from('session_recaps').select('recap').eq('user_id', uid)
+        .order('created_at', { ascending: false }).limit(1).single();
 
       const { data: existing } = await supabase
-        .from('working_notes')
-        .select('id')
-        .eq('user_id', uid)
-        .eq('source', 'login')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .from('working_notes').select('id').eq('user_id', uid)
+        .eq('source', 'login').order('created_at', { ascending: false }).limit(1).single();
 
       if (!existing && latestRecap?.recap) {
         await supabase.from('working_notes').insert({
@@ -686,46 +856,77 @@ useEffect(() => {
       }
 
       const { data: notesData } = await supabase
-        .from('working_notes')
-        .select('content')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false })
-        .limit(6);
+        .from('working_notes').select('content').eq('user_id', uid)
+        .order('created_at', { ascending: false }).limit(6);
 
       if (notesData && notesData.length > 0) {
         setNotes(notesData.map(n => n.content));
       }
 
       setChecked(true);
+
+      if (profile?.onboarding_completed) {
+        try {
+          const messaging = getMessagingSafe();
+          const permission = typeof Notification !== 'undefined' ? Notification.permission : 'default';
+
+          if (messaging && 'serviceWorker' in navigator && permission === 'granted' && !profile?.fcm_token) {
+            const swReg = await navigator.serviceWorker.ready;
+            const token = await getToken(messaging, {
+              vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+              serviceWorkerRegistration: swReg,
+            });
+            if (token) {
+              await supabase.from('profiles').update({
+                fcm_token: token,
+                updated_at: new Date().toISOString(),
+              }).eq('user_id', uid);
+            }
+          } else if (permission === 'default' && !notifAsked)
+        
+        {
+            setShowNotifModal(true);
+            if (isStandalone) setShowIOSFix(true);
+          }
+        } catch (err) {
+          console.error('FCM refresh error on init:', err);
+        }
+      }
+
       return;
     }
 
-    // ✅ Only fall into guest mode if truly no session
-    if (isGuestMode()) {
-      setIsGuest(true);
-      setPhase('profile');
-      setStep(1);
-      setShowDisclaimer(true);
-      setHasAcceptedTerms(false);
-      setChecked(true);
-      return;
-    }
+if (isGuestMode()) {
+  setIsGuest(true);
+  setPhase('guided'); // ✅ important
+  setStep(1);
 
-    // No session, no guest → guided flow
+  setShowVoiceTip(true); // 🔥 THIS is what you were missing
+
+  setShowDisclaimer(true);
+  setHasAcceptedTerms(false);
+  setChecked(true);
+  return;
+}
+
     setPhase('guided');
+setShowVoiceTip(true);
     setShowDisclaimer(true);
     setHasAcceptedTerms(false);
     setChecked(true);
 
-  } catch (error) {
+  } 
+catch (error) {
     console.error('Error initializing user:', error);
     setPhase('profile');
     setChecked(true);
   }
 };
-  
-  initializeUser();
-}, [sp]);
+
+initializeUser();
+
+
+}, []);
 
 /* ================= WELCOME VOICE ================= */
 
@@ -738,16 +939,60 @@ if (isGuestMode()) return;
       console.log('Auth event:', event, session); // Debug log
       
       if (event === 'SIGNED_IN' && session?.user) {
-        const uid = session.user.id;
-        const email = session.user.email ?? null;
-        
-        setUserId(uid);
-        setUserEmail(email);
+  const uid = session.user.id;
+  const email = session.user.email ?? null;
+
+  setUserId(uid);
+  setUserEmail(email);
+
+  // ✅ Always attempt to refresh FCM token on every sign-in
+  try {
+    const messaging = getMessagingSafe();
+    if (messaging && 'serviceWorker' in navigator) {
+      const permission = Notification.permission; // don't re-prompt if already granted
+      
+      if (permission === 'granted') {
+        const swReg = await navigator.serviceWorker.ready;
+        const token = await getToken(messaging, {
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+          serviceWorkerRegistration: swReg,
+        });
+
+        if (token) {
+          const { error } = await supabase
+  .from('profiles')
+  .update({
+    fcm_token: token,
+    updated_at: new Date().toISOString(),
+  })
+  .eq('user_id', uid);
+
+if (error) {
+  console.error('❌ Failed to save token:', error);
+} else {
+  console.log('✅ Token saved:', token.slice(0, 20));
+}
+          console.log('FCM token refreshed on sign-in:', token.slice(0, 20));
+        }
+      } else if (permission === 'default') {
+        // Permission not yet asked — show modal
+        setShowNotifModal(true);
+      }
+      // if 'denied' → do nothing, respect user choice
+    }
+  } catch (err) {
+    console.error('FCM sync error on sign-in:', err);
+  }
+
+
+  // ... rest of your SIGNED_IN handler unchanged
+
 const { data: profile } = await supabase
   .from('profiles')
- .select('name, country, onboarding_completed')
+  .select('name, country, pronoun, onboarding_completed, fcm_token')
   .eq('user_id', uid)
-  .single();
+  .maybeSingle();
+
 
 if (profile) {
   setName(profile.name || '');
@@ -775,6 +1020,7 @@ if (profile) {
         }
         
         setPhase('confirming');
+setShowVoiceTip(true);
         setChecked(true);
    } else if (event === 'SIGNED_OUT') {
   setUserId(null);
@@ -792,6 +1038,20 @@ if (profile) {
 }, []);
 
 
+
+useEffect(() => {
+  const unsub = onForegroundMessage((payload) => {
+    alert(
+      payload.notification?.title + ' - ' +
+      payload.notification?.body
+    );
+  });
+
+  return () => {
+    if (unsub) unsub();
+  };
+}, []);
+
 /* ================= AUTO SAVE PROFILE ================= */
 useEffect(() => {
   if (!aiSpeaking) return;
@@ -803,7 +1063,72 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, [aiSpeaking]);
 
+useEffect(() => {
+  if (!userId) return;
 
+  const runFCM = async () => {
+    try {
+      const messaging = getMessagingSafe();
+      if (!messaging || !('serviceWorker' in navigator)) return;
+
+      if (Notification.permission !== 'granted') return;
+
+      const swReg = await navigator.serviceWorker.ready;
+
+      const token = await getToken(messaging, {
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: swReg,
+      });
+
+      console.log('🔥 FCM TOKEN:', token);
+
+      if (!token) return;
+
+      // ✅ TRY UPDATE FIRST
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          fcm_token: token,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .select();
+
+      if (error) {
+        console.error('❌ UPDATE ERROR:', error);
+        return;
+      }
+
+      // ✅ IF NO PROFILE → INSERT
+      if (!data || data.length === 0) {
+        console.log('⚠️ No profile → inserting');
+
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: userId,
+            email: userEmail ?? null,
+            fcm_token: token,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          console.error('❌ INSERT ERROR:', insertError);
+        } else {
+          console.log('✅ INSERT SUCCESS');
+        }
+
+      } else {
+        console.log('✅ UPDATE SUCCESS');
+      }
+
+    } catch (err) {
+      console.error('❌ FCM ERROR:', err);
+    }
+  };
+
+  runFCM();
+}, [userId]);
 
 const handleSend = async () => {
   if (!inputValue.trim() || isLoading) return;
@@ -898,21 +1223,177 @@ await saveWorkingNote(userId, data.note);
     router.push(`/?lang=${lang}`);
   };
 
-  if (!checked) return null;
+if (!checked) {
+  return (
+    <div style={{
+      height: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      color: "#7aa2ff",
+      fontSize: 14
+    }}>
+      Loading Neuronaut…
+    </div>
+  );
+}
 const isReviewer = sp.get('reviewer') === '1';
 
   return (
   <>
-    {showDisclaimer && (
-      <DisclaimerModal
-        termsVersion={TERMS_VERSION}
-        persistence="none"
-        onAccept={handleDisclaimerAccept}
-        onDecline={() => router.push(`/?lang=${lang}`)}
-      />
-    )}
+{showDisclaimer && (
+  <DisclaimerModal
+    onAccept={handleDisclaimerAccept}
+  />
+)}
+
+
+    {showNotifModal && (
+  <div style={{
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 100,
+  }}>
+    <div style={{  
+      background: '#0f1533', borderRadius: 20, padding: 32, maxWidth: 320,
+      border: '1px solid rgba(122,162,255,0.3)', textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 40, marginBottom: 16 }}>🔔</div>
+
+      <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 10, color: '#e5ecff' }}>
+        {T.notifyTitle}
+      </div>
+
+      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 24 }}>
+        {T.notifyBody}
+      </div>
+
+      <button
+        onClick={async () => {
+  setShowNotifModal(false);
+  setNotifAsked(true);
+
+  try {
+  const permission = await Notification.requestPermission();
+
+  if (permission !== 'granted') return;
+
+  const swReg = await navigator.serviceWorker.ready;
+  const messaging = getMessagingSafe();
+
+  if (!messaging) return;
+
+  const token = await getToken(messaging, {
+    vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+    serviceWorkerRegistration: swReg,
+  });
+
+  if (token) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+  await supabase
+  .from('profiles')
+  .update({
+    fcm_token: token,
+    updated_at: new Date().toISOString(),
+  })
+  .eq('user_id', user.id);
+    }
+  }
+} catch (err) {
+  console.error('Token error:', err);
+}
+}}
+        style={{
+          width: '100%', padding: '12px', borderRadius: 12,
+          background: '#7aa2ff', color: '#000', border: 'none',
+          fontWeight: 700, cursor: 'pointer', fontSize: 15, marginBottom: 10,
+        }}
+      >
+        {T.notifyAllow}
+      </button>
+
+      <button
+        onClick={() => {
+          setShowNotifModal(false);
+        }}
+
+        style={{
+          width: '100%', padding: '10px', borderRadius: 12,
+          background: 'transparent', color: 'rgba(255,255,255,0.4)',
+          border: '1px solid rgba(255,255,255,0.15)', cursor: 'pointer', fontSize: 13,
+        }}
+      >
+        {T.notifyLater}
+      </button>
+    </div>
+  </div>
+)}
+
+{showIOSFix && (
+  <div style={{
+    position: 'fixed',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    background: '#111',
+    border: '1px solid rgba(122,162,255,0.4)',
+    borderRadius: 12,
+    padding: 14,
+    zIndex: 999,
+    fontSize: 13,
+    color: '#fff',
+    textAlign: 'center'
+  }}>
+    Notifications need a quick fix on iPhone.  
+    Please reinstall the app from Safari to enable them.
+
+    <div
+      onClick={() => setShowIOSFix(false)}
+      style={{
+        marginTop: 8,
+        fontSize: 12,
+        opacity: 0.6,
+        cursor: 'pointer'
+      }}
+    >
+      Got it
+    </div>
+  </div>
+)}
+
+{showVoiceTip && voiceOn && (
+  <div
+    style={{
+      position: 'fixed',
+      top: 20,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      background: 'rgba(255,255,255,0.9)',
+      color: '#0f1533',
+      border: '1px solid rgba(122,162,255,0.4)',
+      backdropFilter: 'blur(12px)',
+      borderRadius: 12,
+      padding: '10px 16px',
+      fontSize: 13,
+      fontWeight: 600,
+      zIndex: 999,
+      boxShadow: '0 0 20px rgba(122,162,255,0.6)',
+    }}
+  >
+    🔊 {T.voiceTip}
+  </div>
+)}
+
+)
+
 
     <div style={page}>
+
+
       <div className="ghost-symbol" style={ghostSymbol} />
 
     <div style={aiOrbWrap}>
@@ -956,6 +1437,10 @@ const isReviewer = sp.get('reviewer') === '1';
 </div>
       <div style={notesAuthBar} className="notes-auth-mobile">
 
+
+  
+
+
   {/* LANG BUTTONS */}
   <div style={{ display: 'flex', gap: 6, marginRight: 8 }}>
     {(['en', 'pt', 'es', 'fr'] as Lang[]).map((l) => (
@@ -984,7 +1469,7 @@ const isReviewer = sp.get('reviewer') === '1';
       onClick={() => {
         setStep(1);
         setReason(null);
-        setPhase('profile');
+      setPhase('guided');
       }}
       style={{
         padding: '4px 8px',
@@ -1053,12 +1538,19 @@ const isReviewer = sp.get('reviewer') === '1';
       style={primaryBtn}
      onClick={async () => {
 
-  if (isFirstTimeUser) {
-    setPhase('profile');   // NEW USERS → PROFILE FIRST
-    return;
-  }
+if (isFirstTimeUser) {
+  setPhase('guided');
+  setStep(1);
+  return;
+}
 
-  setPhase('chat');        // RETURNING USERS → CHAT
+setPhase('guided');
+setStep(1);    
+
+
+ // PHASE GUIDED  -RETURNING USERS → CHAT
+
+
 const welcome =
   lang === 'pt'
     ? `Bem-vindo de volta ${displayName}.`
@@ -1081,7 +1573,7 @@ const welcome =
 )}
 
 
-      {phase === 'profile' && (
+      {false && (
         <div style={questionBox}>
           <div style={question} className="question-text-mobile">
             {T.nameTitle}
@@ -1133,17 +1625,66 @@ const welcome =
         onClick={async () => {
   console.log('SAVE ATTEMPT:', { userId, name, cleanName }); // ← ADD HERE
 
-  // SAVE PROFILE
-  if (userId && name.trim()) {
+  
+
+// SAVE PROFILE + FCM (FINAL)
+if (userId) {
+  (async () => {
+    try {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+if (existing) {
   await supabase
-  .from('profiles')
-  .update({
-    name: cleanName || name.trim(),
-    country,
-    pronoun,
-    onboarding_completed: true,
-  })
-  .eq('user_id', userId);
+    .from('profiles')
+    .update({
+      onboarding_completed: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+} else {
+  await supabase
+    .from('profiles')
+    .insert({
+      user_id: userId,
+      email: userEmail ?? null,
+      onboarding_completed: true,
+      updated_at: new Date().toISOString(),
+    });
+}
+      // FCM
+      const messaging = getMessagingSafe();
+
+      if (messaging && 'serviceWorker' in navigator) {
+        if (Notification.permission === 'granted') {
+          const swReg = await navigator.serviceWorker.ready;
+
+          const token = await getToken(messaging, {
+            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+            serviceWorkerRegistration: swReg,
+          });
+
+          if (token) {
+            await supabase
+              .from('profiles')
+              .update({
+                fcm_token: token,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('user_id', userId);
+
+            console.log('✅ FCM saved');
+          }
+        }
+      }
+
+    } catch (err) {
+      console.error('❌ SAVE FLOW ERROR:', err);
+    }
+  })();
 }
 
   // 🔥 INSTANT LOCAL UPDATE (NO LOGOUT NEEDED)
@@ -1159,16 +1700,30 @@ const welcome =
       ? `D’accord — je vais t’appeler ${name.trim()} maintenant.`
       : `Got it — I’ll call you ${name.trim()} from now on.`;
 
-  setMessages([{ role: 'assistant', text: confirmName }]);
-  speak(confirmName);
+ setMessages([{ role: 'assistant', text: confirmName }]);
+speak(confirmName);
+setPhase('chat');
 
-  setPhase('chat');
+// 🔥 FCM SAVE (NON-BLOCKING)
+
+// Show notification modal after profile completion
+setTimeout(() => {
+  const permission = typeof Notification !== 'undefined'
+    ? Notification.permission
+    : 'default';
+  if (permission !== 'denied') {
+    setShowNotifModal(true);
+    if (isStandalone) setShowIOSFix(true);
+  }
+}, 500);
 }}
           >
             {T.startTalking}
           </button>
         </div>
       )}
+
+
 
       {phase === 'guided' && (
         <div style={questionBox}>
@@ -1181,137 +1736,242 @@ const welcome =
       margin: '0 auto',
     }}
   >
-    {/* AI CORE */}
-    <div
-      style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: 110,
-        height: 110,
-        borderRadius: '50%',
-        background: 'rgba(122,162,255,0.25)',
-        border: '2px solid rgba(122,162,255,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontWeight: 700,
-        boxShadow: '0 0 25px rgba(122,162,255,0.5)',
-      }}
-    >
-      AI Core
-    </div>
 
-    {/* TOP */}
-    <button
-      style={{ ...orbitBtn, left: '50%', top: 0 }}
-      onClick={() => {
-  const starter =
-    lang === 'pt'
-      ? "Qual direção futura você quer explorar?"
-      : lang === 'es'
-      ? "¿Qué dirección futura quieres explorar?"
-      : lang === 'fr'
-      ? "Quelle direction future veux-tu explorer ?"
-      : "What future direction do you want to explore?";
+    {/* ================= MOOD + REASON SELECTOR ================= */}
 
-  setMessages([{ role: 'assistant', text: starter }]);
-  speak(starter);
-  setPhase('chat');
-}}
-    >
-      {T.q1_future}
-    </button>
-
-    {/* LEFT */}
-    <button
-      style={{ ...orbitBtn, left: '10%', top: 110 }}
-      onClick={() => {
-       const starter =
-  lang === 'pt'
-    ? "O que está acontecendo com seu trabalho?"
-    : lang === 'es'
-    ? "¿Qué está pasando con tu trabajo?"
-    : lang === 'fr'
-    ? "Que se passe-t-il avec ton travail ?"
-    : "What’s going on with your work?";
-
-setMessages([{ role: 'assistant', text: starter }]);
-speak(starter);
-setPhase('chat');
-      }}
-    >
-      {T.q1_work}
-    </button>
-
-    {/* RIGHT */}
-    <button
-      style={{ ...orbitBtn, left: '100%', top: 110 }}
-      onClick={() => {
-       const starter =
-  lang === 'pt'
-    ? "O que você quer melhorar nas suas finanças?"
-    : lang === 'es'
-    ? "¿Qué quieres mejorar en tus finanzas?"
-    : lang === 'fr'
-    ? "Que veux-tu améliorer dans tes finances ?"
-    : "What do you want to improve about your finances?";
-
-setMessages([{ role: 'assistant', text: starter }]);
-speak(starter);
-setPhase('chat');
-      }}
-    >
-      {T.q1_finance}
-    </button>
-
-    {/* BOTTOM LEFT */}
-  {/* BOTTOM LEFT */}
-<button
-  style={{ ...orbitBtn, left: '20%', top: 240 }}
-  onClick={() => {
-  const starter =
-    lang === 'pt'
-      ? "Quais habilidades você quer melhorar?"
-      : lang === 'es'
-      ? "¿Qué habilidades quieres mejorar?"
-      : lang === 'fr'
-      ? "Quelles compétences veux-tu améliorer ?"
-      : "What skills do you want to improve?";
-
-  setMessages([{ role: 'assistant', text: starter }]);
-  speak(starter);
-  setPhase('chat');
-}}
+<div
+  style={{
+    position: 'relative',
+    width: 420,
+    height: 320,
+    margin: '0 auto',
+  }}
 >
-  {T.q1_skills}
-</button>
 
-{/* BOTTOM RIGHT */}
-<button
-  style={{ ...orbitBtn, left: '80%', top: 240 }}
-  onClick={() => {
-  const starter =
-    lang === 'pt'
-      ? "Sobre o que você quer conversar?"
-      : lang === 'es'
-      ? "¿De qué quieres hablar?"
-      : lang === 'fr'
-      ? "De quoi veux-tu parler ?"
-      : "What do you want to talk about?";
+{/* MOODS */}
+<div style={{ marginBottom: 20 }}>
+<div style={{ marginBottom: 10, fontWeight: 600 }}>
+  {T.qMood}
+</div>
 
-  setMessages([{ role: 'assistant', text: starter }]);
-  speak(starter);
-  setPhase('chat');
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+    {moods.map((m) => (
+      <button
+        key={m.id}
+        style={{
+          ...moodBtn,
+          outline: selectedMood === m.label ? "3px solid #7aa2ff" : "none"
+        }}
+
+        onMouseEnter={(e) => {
+          const img = e.currentTarget.querySelector("img");
+          if (img) img.style.opacity = "0.85";
+        }}
+
+        onMouseLeave={(e) => {
+          const img = e.currentTarget.querySelector("img");
+          if (img) img.style.opacity = "0.38";
+        }}
+
+       onClick={() => {
+  setSelectedMood(m.id);
+
+  if (!reason) {
+  alert(T.alertChooseReason);
+  return;
+}
+
+const moodMap = {
+  dissatisfied: T.dissatisfied,
+  neutral: T.neutral,
+  hopeful: T.hopeful,
+  thriving: T.thriving,
+};
+
+const reasonMap = {
+  work: T.reason_work,
+  finance: T.reason_finance,
+  future: T.reason_future,
+  skills: T.reason_skills,
+  talk: T.reason_talk,
+};
+
+const moodText = moodMap[m.id as keyof typeof moodMap];
+const reasonText = reasonMap[reason as keyof typeof reasonMap];
+const intro = `${moodText} • ${reasonText}. ${T.compareOrAsk}`;
+
+setMessages([{ role: "assistant", text: intro }]);
+speak(intro);
+setPhase("chat");
+
+
+
+  setMessages([{ role: "assistant", text: intro }]);
+  speak(intro);
+  setPhase("chat");
 }}
->
-  {T.q1_talk}
-</button>
+      >
+        <img src={m.src} style={moodImg} />
+      </button>
+    ))}
   </div>
-)}
+</div>
 
+{/* AI CORE */}
+<div
+  style={{
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 110,
+    height: 110,
+    borderRadius: '50%',
+    background: 'rgba(122,162,255,0.25)',
+    border: '2px solid rgba(122,162,255,0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#fff',
+    fontWeight: 700,
+    boxShadow: '0 0 25px rgba(122,162,255,0.5)',
+  }}
+>
+
+
+AI Core
+</div>
+
+{/* FUTURE */}
+<button
+  style={{
+    ...orbitBtn,
+    left: '50%',
+    top: 18,
+    outline: reason === "future" ? "3px solid #7aa2ff" : "none"
+  }}
+
+  onClick={() => {
+
+    setReason('future');
+
+   if (!selectedMood) {
+  alert(T.alertChoosePicture);
+  return;
+}
+  const starter = T.q1_future;
+
+    setMessages([{ role: 'assistant', text: starter }]);
+    speak(starter);
+    setPhase('chat');
+  }}
+>
+{T.q1_future}
+</button>
+
+
+{/* WORK */}
+<button
+  style={{
+    ...orbitBtn,
+    left: '10%',
+    top: 110,
+    outline: reason === "work" ? "3px solid #7aa2ff" : "none"
+  }}
+  onClick={() => {
+
+    setReason('work');
+
+ alert(T.alertChoosePicture);
+
+   const starter = T.q1_work;
+
+    setMessages([{ role: 'assistant', text: starter }]);
+    speak(starter);
+    setPhase('chat');
+  }}
+>
+{T.q1_work}
+</button>
+
+
+{/* FINANCE */}
+<button
+  style={{
+    ...orbitBtn,
+    left: '100%',
+    top: 110,
+    outline: reason === "finance" ? "3px solid #7aa2ff" : "none"
+  }}
+  onClick={() => {
+
+    setReason('finance');
+
+ alert(T.alertChoosePicture);
+
+const starter = T.q1_finance;
+
+    setMessages([{ role: 'assistant', text: starter }]);
+    speak(starter);
+    setPhase('chat');
+  }}
+>
+{T.q1_finance}
+</button>
+
+
+{/* SKILLS */}
+<button
+  style={{
+    ...orbitBtn,
+    left: '20%',
+    top: 240,
+    outline: reason === "skills" ? "3px solid #7aa2ff" : "none"
+  }}
+  onClick={() => {
+
+    setReason('skills');
+
+ alert(T.alertChoosePicture);
+
+   const starter = T.q1_skills;
+
+    setMessages([{ role: 'assistant', text: starter }]);
+    speak(starter);
+    setPhase('chat');
+  }}
+>
+{T.q1_skills}
+</button>
+
+
+{/* TALK */}
+<button
+  style={{
+    ...orbitBtn,
+    left: '80%',
+    top: 240,
+    outline: reason === "talk" ? "3px solid #7aa2ff" : "none"
+  }}
+  onClick={() => {
+
+    setReason('talk');
+
+  alert(T.alertChoosePicture);
+
+  const starter = T.q1_talk;
+
+    setMessages([{ role: 'assistant', text: starter }]);
+    speak(starter);
+    setPhase('chat');
+  }}
+>
+{T.q1_talk}
+</button>
+
+</div>
+</div>
+)}
           
           {step === 3 && (
             <>
@@ -1335,31 +1995,34 @@ setPhase('chat');
               <button
                 style={primaryBtn}
                 onClick={async () => {
+                  // SAVE PROFILE — get fresh session first
+const { data: { user: freshUser } } = await supabase.auth.getUser();
+const freshUid = freshUser?.id;
 
-  // 🔵 SAVE PROFILE IF LOGGED IN
-  if (userId) {
-    await supabase.from('profiles').upsert({
-      user_id: userId,
-     name: cleanName,
-      country,
-      pronoun,
-    }, { onConflict: 'user_id' });
-  }
+if (freshUid) {
+  const { error } = await supabase.from('profiles').upsert({
+  user_id: freshUid,
+  email: userEmail ?? null, // 👈 add this
+  onboarding_completed: true,
+  updated_at: new Date().toISOString(),
+}, { onConflict: 'user_id' });
 
-  const intro =
-    lang === 'pt'
-      ? 'Bem-vindo ao Neuronaut. Você está ouvindo uma voz… formada por muitas vidas.'
-      : lang === 'es'
-      ? 'Bienvenido a Neuronaut. Estás escuchando una voz… formada por muchas vidas.'
-      : lang === 'fr'
-      ? 'Bienvenue sur Neuronaut. Vous entendez une voix… formée par de nombreuses vies.'
-      : 'Welcome to Neuronaut. You’re hearing one voice… formed from many lives.';
+  if (error) console.error('Profile save error:', error);
+}
 
-  setMessages([{ role: 'assistant', text: intro }]);
-  speak(intro);
-  setPhase('chat');
-}}
+                  const intro =
+                    lang === 'pt'
+                      ? 'Bem-vindo ao Neuronaut. Você está ouvindo uma voz… formada por muitas vidas.'
+                      : lang === 'es'
+                      ? 'Bienvenido a Neuronaut. Estás escuchando una voz… formada por muchas vidas.'
+                      : lang === 'fr'
+                      ? 'Bienvenue sur Neuronaut. Vous entendez une voix… formée par de nombreuses vies.'
+                      : "Welcome to Neuronaut. You're hearing one voice… formed from many lives.";
 
+                  setMessages([{ role: 'assistant', text: intro }]);
+                  speak(intro);
+                  setPhase('chat');
+                }}
               >
                 {T.startTalking}
               </button>
@@ -1370,6 +2033,46 @@ setPhase('chat');
 
       {phase === 'chat' && (
         <div style={chatWrapper}>
+
+
+    {/* MOOD SELECTOR */}
+    {messages.length === 0 && (
+      <div style={moodPanel}>
+        <div style={moodTitle}>
+  {T.qMood}
+</div>
+
+        <div style={moodGrid}>
+          {moods.map((m) => (
+            <button
+              key={m.id}
+              style={moodBtn}
+              onClick={() => {
+
+const moodMap = {
+  dissatisfied: T.dissatisfied,
+  neutral: T.neutral,
+  hopeful: T.hopeful,
+  thriving: T.thriving,
+};
+
+const moodText = moodMap[m.id as keyof typeof moodMap];
+const intro = T.moodSelected(moodText);
+
+                setMessages([{ role: 'assistant', text: intro }]);
+                speak(intro);
+              }}
+            >
+              <img src={m.src} style={moodImg} />
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+
+
+
+
           {/* ================= MESSAGES ================= */}
           <div style={chatMessages}>
             {messages.map((m, i) => (
@@ -1503,7 +2206,7 @@ setPhase('chat');
         </div>
       )}
     </div>
-  </>
+ </>
 );
 }
 
@@ -1647,7 +2350,8 @@ const questionBox: React.CSSProperties = {
 };
 
 const question: React.CSSProperties = {
-  marginBottom: 14,
+  marginBottom: 6,
+  marginTop: -4, // 👈 ADD THIS LINE
   fontSize: 18,
   fontWeight: 600,
   color: 'rgba(255,255,255,0.95)',
@@ -1765,5 +2469,43 @@ const calmNote: React.CSSProperties = {
   textShadow: '0 0 18px rgba(120,160,255,0.35)',
   zIndex: 2,
   pointerEvents: 'none',
+};
+
+const moodTitle: React.CSSProperties = {
+  marginBottom: 14,
+  fontWeight: 600,
+  opacity: 0.9,
+};
+
+const moodPanel: React.CSSProperties = {
+  padding: 24,
+  maxWidth: 420,
+  margin: '0 auto 20px',
+  textAlign: 'center',
+
  };
-   
+ const moodGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 12,
+};
+
+const moodBtn: React.CSSProperties = {
+  borderRadius: 16,
+  overflow: 'hidden',
+  border: '1px solid rgba(122,162,255,0.25)',
+  background: 'transparent',
+  cursor: 'pointer',
+};
+
+const moodImg: React.CSSProperties = {
+  width: '100%',
+  display: 'block',
+
+  opacity: 0.38,          // ghost transparency
+  filter: 'brightness(1.1) contrast(0.9) saturate(0.9)',
+
+  transition: 'all 0.25s ease',
+};
+
+

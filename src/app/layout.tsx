@@ -1,6 +1,5 @@
 import "./globals.css";
-import type { ReactNode } from "react";
-import { Suspense } from "react";
+import { ReactNode, Suspense } from "react";
 import { cookies } from "next/headers";
 import HashAuthBridge from "@/components/HashAuthBridge";
 
@@ -43,22 +42,22 @@ export default async function RootLayout({
         <meta name="google" content="notranslate" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
       </head>
 
       <body
-        style={{
-          backgroundColor: "#0a0f1c",
-          color: "#fff",
-          minHeight: "100vh",
+  style={{
+    backgroundColor: "#0a0f1c",
+    color: "#fff",
+    minHeight: "100dvh",
           WebkitFontSmoothing: "antialiased",
           MozOsxFontSmoothing: "grayscale",
         }}
       >
         <HashAuthBridge />
 
-        <main style={{ minHeight: "100vh" }}>
+       <main style={{ minHeight: "100dvh" }}>
           <Suspense fallback={<div style={{ padding: 24 }}>Loading…</div>}>
             {children}
           </Suspense>

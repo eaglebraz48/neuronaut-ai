@@ -29,7 +29,7 @@ const L: Record<
     reviewerEmail: string;
     password: string;
     signinpw: string;
-magicLink: string;
+    magicLink: string;
   }
 > = {
   en: {
@@ -45,7 +45,7 @@ magicLink: string;
     reviewerEmail: 'Reviewer access email',
     password: 'Password (reviewers only)',
     signinpw: 'Sign in with password',
-magicLink: 'Or click the link in your email',
+    magicLink: 'Or click the link in your email',
   },
   pt: {
     title: 'Entrar',
@@ -60,7 +60,7 @@ magicLink: 'Or click the link in your email',
     reviewerEmail: 'E-mail do revisor',
     password: 'Senha (apenas revisores)',
     signinpw: 'Entrar com senha',
-magicLink: 'Ou clique no link no seu e-mail',
+    magicLink: 'Ou clique no link no seu e-mail',
   },
   es: {
     title: 'Iniciar sesión',
@@ -75,7 +75,7 @@ magicLink: 'Ou clique no link no seu e-mail',
     reviewerEmail: 'Correo del revisor',
     password: 'Contraseña (solo revisores)',
     signinpw: 'Entrar con contraseña',
-magicLink: 'O haz clic en el enlace de tu correo',
+    magicLink: 'O haz clic en el enlace de tu correo',
   },
   fr: {
     title: 'Connexion',
@@ -90,7 +90,7 @@ magicLink: 'O haz clic en el enlace de tu correo',
     reviewerEmail: 'E-mail du réviseur',
     password: 'Mot de passe (réviseurs uniquement)',
     signinpw: 'Se connecter avec mot de passe',
-magicLink: 'Ou cliquez sur le lien dans votre e-mail',
+    magicLink: 'Ou cliquez sur le lien dans votre e-mail',
   },
 };
 
@@ -104,33 +104,51 @@ function PageInner() {
 
   const [magicEmail, setMagicEmail] = React.useState('');
   const [code, setCode] = React.useState('');
-  const [reviewerEmail, setReviewerEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
   const [status, setStatus] = React.useState<'idle' | 'sent'>('idle');
   const [busy, setBusy] = React.useState(false);
 
+  // ✅ Google login (moved inside component)
+  const handleGoogleSignIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      console.error('Google sign-in error:', error.message);
+    }
+  };
+
   async function sendCode() {
-  if (!magicEmail.includes('@')) return;
-  setBusy(true);
+    if (!magicEmail.includes('@')) return;
+    setBusy(true);
 
-  const { error } = await supabase.auth.signInWithOtp({
-    email: magicEmail,
-    options: {
-      shouldCreateUser: true,
-      emailRedirectTo: `${window.location.origin}/dashboard?lang=${lang}`,
-    },
-  });
+    const { error } = await supabase.auth.signInWithOtp({
+      email: magicEmail,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: `${window.location.origin}/dashboard?lang=${lang}`,
+      },
+    });
 
-  setBusy(false);
-  if (error) {
-    alert(error.message);
-    return;
+    setBusy(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    setStatus('sent');
   }
-  setStatus('sent');
-}
 
   async function verifyCode() {
-    if (!code) return;
+    if (!code || !magicEmail) {
+      alert("Enter the code from your email.");
+      return;
+    }
+
     setBusy(true);
 
     const { error } = await supabase.auth.verifyOtp({
@@ -141,20 +159,12 @@ function PageInner() {
 
     setBusy(false);
 
-    if (!error) {
-      router.replace(`/dashboard?lang=${lang}`);
+    if (error) {
+      alert(error.message);
+      return;
     }
-  }
 
-  async function reviewerLogin() {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: reviewerEmail,
-      password,
-    });
-
-    if (!error) {
-      router.replace(`/dashboard?lang=${lang}&reviewer=1`);
-    }
+    router.replace(`/dashboard?lang=${lang}`);
   }
 
   function guestLogin() {
@@ -180,55 +190,66 @@ function PageInner() {
               placeholder={t.code}
               onChange={(e) => setCode(e.target.value)}
               disabled={busy}
-              className="w-full h-[70px] px-6 box-border rounded-[22px] bg-white text-black text-2xl md:text-xl outline-none"
+              className="w-full h-[70px] px-6 rounded-[22px] bg-white text-black text-2xl outline-none"
             />
 
-           <button
+            <button
               onClick={verifyCode}
               disabled={busy}
-              className="w-full h-[70px] px-6 box-border rounded-[22px] text-[#020617] font-bold text-[16px]"
+              className="w-full h-[70px] rounded-[22px] text-[#020617] font-bold"
               style={{ background: 'linear-gradient(135deg,#8fa6ff 0%,#6f88ff 100%)' }}
             >
               {t.verify}
             </button>
 
-            <p className="text-sm text-[#38bdf8] mt-2">{t.magicLink}</p>
-
+            <p className="text-sm text-[#38bdf8]">{t.magicLink}</p>
           </div>
 
         ) : (
           <div className="flex flex-col gap-4">
 
-            <p className="text-sm text-gray-400">{t.hint}</p>
+{/* ✅ Google FIRST */}
+<button
+  onClick={handleGoogleSignIn}
+  className="w-full h-[60px] rounded-[22px] bg-white text-black font-semibold text-[18px] flex items-center justify-center gap-3 shadow-md hover:scale-[1.02] transition-all"
+>
+  <img
+    src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+    alt="Google"
+    className="w-5 h-5"
+  />
+  Continue with Google
+</button>
 
-            <input
-              type="email"
-              value={magicEmail}
-              placeholder={t.email}
-              onChange={(e) => setMagicEmail(e.target.value)}
-              disabled={busy}
-              className="w-full h-[70px] px-6 box-border rounded-[22px] bg-white text-black text-2xl md:text-xl outline-none"
-            />
+{/* 👇 push this LOWER + combine with "or" */}
+<p className="text-sm text-gray-400 mt-6">
+  or {t.hint}
+</p>
 
-            <button
-              onClick={sendCode}
-              disabled={busy}
-              className="w-full h-[70px] px-6 box-border rounded-[22px] text-[#020617] font-bold text-[16px]"
-              style={{ background: 'linear-gradient(135deg,#8fa6ff 0%,#6f88ff 100%)' }}
-            >
-              {t.send}
-            </button>
+<input
+  type="email"
+  value={magicEmail}
+  placeholder={t.email}
+  onChange={(e) => setMagicEmail(e.target.value)}
+  disabled={busy}
+  className="w-full h-[70px] px-6 rounded-[22px] bg-white text-black text-2xl outline-none"
+ />
 
-            <div className="flex items-center my-2">
-              <div className="flex-grow h-px bg-gray-700"></div>
-              <span className="px-3 text-xs text-gray-400">or</span>
-              <div className="flex-grow h-px bg-gray-700"></div>
-            </div>
+<button
+  onClick={sendCode}
+  disabled={busy}
+  className="w-full h-[70px] rounded-[22px] text-[#020617] font-bold"
+  style={{ background: 'linear-gradient(135deg,#8fa6ff 0%,#6f88ff 100%)' }}
+>
+  {t.send}
+</button>
+
+                
 
             <button
               onClick={guestLogin}
               disabled={busy}
-              className="w-full py-4 rounded-[22px] border text-[#c9d4ff] text-[15px] font-semibold"
+              className="w-full py-4 rounded-[22px] border text-[#c9d4ff] font-semibold"
               style={{
                 border: '1px solid rgba(130,160,255,0.45)',
                 background: 'rgba(10,15,28,0.6)',
@@ -242,7 +263,7 @@ function PageInner() {
 
         <Link
           href={`/?lang=${lang}`}
-          className="block mt-6 text-sm text-blue-300 hover:text-blue-400"
+          className="block mt-6 text-sm text-blue-300"
         >
           {t.back}
         </Link>

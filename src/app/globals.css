@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ✅ Core mobile stability fixes (SAFE) */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ✅ Prevent iPhone auto-zoom on inputs */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* ================= BASE ================= */
 body {
   background: #0a0f1c;
   color: white;
@@ -9,7 +29,7 @@ body {
 
 /* ---------- Neuronaut link visibility fix ---------- */
 a {
-  color: #6ee7ff; /* cyan / readable */
+  color: #6ee7ff;
   text-decoration: none;
   font-weight: 500;
 }
@@ -19,7 +39,7 @@ a:hover {
   text-decoration: underline;
 }
 
-/* Dashboard cards */
+/* ================= CARDS ================= */
 .card {
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.02);
@@ -27,18 +47,15 @@ a:hover {
   padding: 28px;
 }
 
-/* Section titles inside cards */
 .card h2,
 .card h3 {
   color: #ffffff;
 }
 
-/* Secondary text */
 .card p {
   color: #b6c2d9;
 }
 
-/* Primary action links inside cards */
 .card a {
   display: inline-block;
   margin-top: 12px;
@@ -50,12 +67,12 @@ a:hover {
   color: #bae6fd;
 }
 
-/* Example: .neuronaut-btn class for global button styling */
+/* ================= BUTTON ================= */
 .neuronaut-btn {
-  background-color: #38bdf8; /* Neuronaut blue */
+  background-color: #38bdf8;
   color: white;
   padding: 10px 14px;
-  border-radius: 8px; /* Example: Add border radius to match previous button style */
+  border-radius: 8px;
   font-weight: 800;
   font-size: 14px;
   text-align: center;
@@ -64,14 +81,15 @@ a:hover {
 }
 
 .neuronaut-btn:hover {
-  background-color: #1e293b; /* Darken on hover */
+  background-color: #1e293b;
 }
 
 .neuronaut-btn:focus {
   outline: none;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
 }
-/* ================= AI WAVE ANIMATION ================= */
+
+/* ================= AI WAVE ================= */
 @keyframes wavePulse {
   0% {
     transform: scaleX(1);
@@ -85,4 +103,24 @@ a:hover {
     transform: scaleX(1);
     opacity: 0.7;
   }
+}
+/* ================= ANDROID FIX ================= */
+
+html, body {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+:root {
+  height: 100%;
+}
+
+/* container principal */
+.main-container {
+  min-height: 100dvh;
+}
+
+/* evita bug quando foca input */
+input:focus {
+  scroll-margin-bottom: 120px;
 }

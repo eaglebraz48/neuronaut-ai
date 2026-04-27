@@ -1,43 +1,41 @@
-import { Resend } from "resend"
-import { NextResponse } from "next/server"
+// NOT IN USE — kept for reference
+// Resend email notification for login
+// To re-enable: uncomment the fetch call in sign-in/page.tsx
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+
+import { Resend } from "resend";
+import { NextResponse } from "next/server";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   try {
 
-    const { email, token, link } = await req.json()
+    const { email } = await req.json();
 
-    await resend.emails.send({
+    const response = await resend.emails.send({
       from: "Neuronaut <login@arison8.com>",
       to: email,
-      subject: "Your Neuronaut login",
+      subject: "Your Neuronaut login code",
       html: `
         <h2>Neuronaut</h2>
 
-        <p>Your login code:</p>
+        <p>Your login request was received.</p>
 
-        <div style="font-size:34px;font-weight:bold;letter-spacing:6px">
-          ${token}
-        </div>
+        <p>If you requested access, return to Neuronaut and enter the code sent by Supabase.</p>
 
-        <p style="margin-top:20px">
-          or
-        </p>
+        <p>You can also click the magic link inside the Supabase email.</p>
+      `
+    });
 
-        <a href="${link}" 
-        style="display:inline-block;padding:12px 22px;background:#38bdf8;color:#000;font-weight:700;border-radius:8px;text-decoration:none;">
-          Sign in instantly
-        </a>
-      `,
-    })
+    console.log("Resend response:", response);
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
 
   } catch (error) {
 
-    console.error(error)
+    console.error("Email send error:", error);
 
-    return NextResponse.json({ error: "Email failed" })
+    return NextResponse.json({ error: "Email failed" });
   }
 }
