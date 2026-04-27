@@ -13,10 +13,30 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const key = searchParams.get('key')
 
- if (key !== process.env.EMAIL_TRIGGER_KEY) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+if (!process.env.EMAIL_TRIGGER_KEY) {
+  return NextResponse.json(
+    { error: 'Missing EMAIL_TRIGGER_KEY on Vercel' },
+    { status: 500 }
+  )
+}
 
+if (!key) {
+  return NextResponse.json(
+    { error: 'Missing key in URL' },
+    { status: 401 }
+  )
+}
+
+if (key.trim() !== process.env.EMAIL_TRIGGER_KEY.trim()) {
+  return NextResponse.json(
+    {
+      error: 'Unauthorized',
+      urlKeyLength: key.length,
+      envKeyLength: process.env.EMAIL_TRIGGER_KEY.length
+    },
+    { status: 401 }
+  )
+}
   const { data: users, error } = await supabase
     .from('profiles')
     .select('email')
@@ -34,7 +54,7 @@ export async function GET(req: Request) {
 
 <p><strong>Abra o Neuronaut:</strong></p>
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut">📱 Android</a> |
+<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
 </p>
 
@@ -55,7 +75,7 @@ export async function GET(req: Request) {
 
 <p><strong>Open Neuronaut:</strong></p>
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut">📱 Android</a> |
+<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
 </p>
 
@@ -76,7 +96,7 @@ export async function GET(req: Request) {
 
 <p><strong>Abre Neuronaut:</strong></p>
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut">📱 Android</a> |
+<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
 </p>
 
@@ -97,7 +117,7 @@ export async function GET(req: Request) {
 
 <p><strong>Ouvrir Neuronaut :</strong></p>
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut">📱 Android</a> |
+<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
 </p>
 
