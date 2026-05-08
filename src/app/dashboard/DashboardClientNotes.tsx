@@ -8,6 +8,7 @@ import { onForegroundMessage } from '@/lib/push';
 import { requestNotificationPermission } from '@/lib/push';
 import { getToken } from 'firebase/messaging';
 import { getMessagingSafe } from '@/lib/firebase';
+import { usePushToken } from '@/hooks/usePushToken';
 
 
 
@@ -544,6 +545,9 @@ const [aiSpeaking, setAiSpeaking] = useState(false);
 const [waveTick, setWaveTick] = useState(0);
 
 const isSigned = !!userId;
+
+// Native Capacitor push token registration (Android / iOS only)
+usePushToken();
 
 const FREE_GUEST_LIMIT = 3;
 const FREE_USER_LIMIT = 6;
@@ -2463,9 +2467,7 @@ const moodImg: React.CSSProperties = {
   width: '100%',
   display: 'block',
 
-  opacity: 0.38,          // ghost transparency
+  opacity: 0.38,
   filter: 'brightness(1.1) contrast(0.9) saturate(0.9)',
-
   transition: 'all 0.25s ease',
 };
-
