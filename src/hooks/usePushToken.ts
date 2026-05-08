@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase';
 
 /**
  * usePushToken — native Capacitor push notification registration.
@@ -10,11 +10,6 @@ import { createClient } from '@supabase/supabase-js';
  * - Requests OS permission, registers with FCM, and saves the token to
  *   profiles.fcm_token via Supabase upsert.
  */
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export function usePushToken() {
   useEffect(() => {

@@ -1239,6 +1239,9 @@ const isReviewer = sp.get('reviewer') === '1';
   setNotifAsked(true);
 
   try {
+  // Notification API not available in Capacitor WebView — skip web push path
+  if (typeof Notification === 'undefined') return;
+
   const permission = await Notification.requestPermission();
 
   if (permission !== 'granted') return;
@@ -2466,7 +2469,6 @@ const moodBtn: React.CSSProperties = {
 const moodImg: React.CSSProperties = {
   width: '100%',
   display: 'block',
-
   opacity: 0.38,
   filter: 'brightness(1.1) contrast(0.9) saturate(0.9)',
   transition: 'all 0.25s ease',
