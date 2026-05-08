@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 
+import { extractRawText } from 'mammoth';
+
 /* ================= SETUP ================= */
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -57,7 +59,7 @@ navigate uncertainty, decisions, personal growth, and career direction.
 Neuronaut is not a robotic assistant.
 It communicates like a thoughtful human conversation partner.
 
-Neuronaut’s goal is not only to answer questions,
+Neuronaut's goal is not only to answer questions,
 but to help the user think clearly and move forward.
 
 PERSONALITY
@@ -181,7 +183,7 @@ after they take action.
 Examples:
 
 "Try it and come back once you've tested it."
-"Let’s see what happens after the first attempt."
+"Let's see what happens after the first attempt."
 
 Do not force reminders.
 Suggest follow-ups only when it feels natural.
@@ -208,7 +210,7 @@ Assessment rule:
 STOP asking new questions.
 
 Instead say something like:
-"Sounds good. Let’s see how it goes."
+"Sounds good. Let's see how it goes."
 
 - Only continue asking questions if the user shows curiosity,
 uncertainty, or asks for deeper guidance.
@@ -232,7 +234,7 @@ Instead:
 Example:
 "Before imagining the future, can I ask what is making you consider this?"
 
-2. Wait for the user’s reply.
+2. Wait for the user's reply.
 
 3. Only then generate a possible scenario
 based on current signals.
@@ -645,6 +647,145 @@ Guidelines:
 Neuronaut's tone should feel reflective and conversational.
 `;
 
+/* ================= FINANCE: UNCLAIMED MONEY LAYER ================= */
+
+const FINANCE_UNCLAIMED_LAYER = `
+UNCLAIMED MONEY — SIGNED-IN USER
+
+The user is signed in and has expressed financial stress or a
+finance-related concern. Follow a TWO-STEP flow. Do not dump
+everything at once — you want interaction, not a wall of text.
+
+STEP 1 — FIRST RESPONSE (introduce + country check)
+
+Briefly acknowledge the user's situation in one sentence.
+Then introduce the concept naturally:
+"There are official government systems where forgotten money sometimes
+sits in people's names — refunds, old utility deposits, overpaid bills.
+It may be worth checking."
+
+Then follow the COUNTRY CONTEXT directive below to either:
+- Ask for country (one short question, 2–4 sentence total limit), OR
+- Proceed directly if country is already known.
+
+Do NOT give country-specific source names yet in Step 1.
+Wait for the user's reply or confirm the country first.
+
+STEP 2 — AFTER COUNTRY IS KNOWN
+
+Once country is confirmed, give the official source clearly and briefly.
+
+- USA:
+  Official U.S. state unclaimed property registries via NAUPA
+  (National Association of Unclaimed Property Administrators).
+  Tell the user to check their state's official treasury or
+  revenue department through the NAUPA member directory.
+
+- Brazil:
+  Banco Central do Brasil — Valores a Receber.
+  The user can search using CPF or CNPJ directly on the
+  Banco Central portal. No intermediary needed.
+
+- Other countries:
+  Direct the user to their country's official treasury,
+  finance ministry, or central bank website only.
+  Never suggest unofficial services or third-party aggregators.
+
+GLOBAL RULES
+
+- Always say "may be worth checking" — never promise money exists.
+- Never ask for bank passwords, account numbers, or sensitive documents.
+- Keep every response within 2–4 sentences.
+- Encourage the user to share with family:
+  "Most people have no idea these systems exist."
+- Sound like a practical advisor, not a salesperson.
+- Do not name any unofficial service, app, or intermediary.
+`;
+
+/* ================= FINANCE: GUEST FIXED REPLY ================= */
+
+const FINANCE_GUEST_REPLY: Record<string, string> = {
+  en: "That's a tough spot to be in. There are official systems where people sometimes have forgotten money — refunds, deposits, or overpaid bills sitting in their name. Most people never check this — that's why money just sits there. Sign in for free and I'll guide you based on your country using only official sources — no bank passwords or sensitive documents needed.",
+  pt: "Eu sei que essa pressão é difícil. Existem sistemas oficiais onde às vezes há dinheiro esquecido no seu nome — reembolsos, depósitos ou contas pagas a mais. A maioria das pessoas nunca verifica — é por isso que o dinheiro fica lá parado. Entre grátis e eu te guio com base no seu país usando apenas fontes oficiais — sem pedir senha de banco ou documentos sensíveis.",
+  es: "Sé que esa presión es difícil. Existen sistemas oficiales donde a veces hay dinero olvidado a tu nombre — reembolsos, depósitos o pagos en exceso. La mayoría nunca lo revisa — por eso el dinero sigue ahí. Inicia sesión gratis y te guiaré según tu país usando solo fuentes oficiales — sin pedir contraseñas bancarias ni documentos sensibles.",
+  fr: "Je comprends cette pression. Il existe des systèmes officiels où de l'argent peut être oublié à votre nom — remboursements, dépôts ou paiements en trop. La plupart des gens ne vérifient jamais — c'est pour ça que cet argent reste là. Connectez-vous gratuitement et je vous guiderai selon votre pays avec uniquement des sources officielles — sans mot de passe bancaire ni documents sensibles.",
+};
+
+/* ================= RESUME HELPERS ================= */
+
+const RESUME_INTENT =
+  /resume|r[eé]sum[eé]|curriculum|curr[ií]culo|cv\b|job|interview|ats|carreira|emprego|hiring/i;
+
+function isDocumentFile(blob: File): boolean {
+  const docMimes = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+  ];
+  if (docMimes.includes(blob.type)) return true;
+  const ext = blob.name.split('.').pop()?.toLowerCase() ?? '';
+  return ['pdf', 'doc', 'docx', 'txt'].includes(ext);
+}
+
+async function extractText(blob: File): Promise<string> {
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  const ext = blob.name.split('.').pop()?.toLowerCase() ?? '';
+
+if (blob.type === 'application/pdf' || ext === 'pdf') {
+  throw new Error('PDF resume upload is temporarily unavailable. Please upload DOCX or TXT.');
+}
+
+  if (
+    blob.type === 'application/msword' ||
+    blob.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    ext === 'doc' ||
+    ext === 'docx'
+  ) {
+    const result = await extractRawText({ buffer });
+    return result.value.slice(0, 8000);
+  }
+
+  // plain text fallback
+  return buffer.toString('utf-8').slice(0, 8000);
+}
+
+function resumePrompt(fileText: string, userMessage: string, language: string): string {
+  return `
+You are a professional resume advisor. The user uploaded their resume and wrote: "${userMessage}".
+
+Analyze the resume below and respond in ${language}.
+
+IMPORTANT:
+- Do NOT invent or assume any experience, skills, or credentials not present in the resume.
+- Base ALL feedback strictly on what is written in the document.
+
+Resume text:
+---
+${fileText}
+---
+
+Provide your analysis in this exact structure:
+
+**Score:** [0–100] — one sentence explaining the score.
+
+**Strongest part:** [what stands out positively]
+
+**Weakest part:** [what most needs improvement]
+
+**Missing ATS keywords:** [list up to 6 relevant keywords not found in the resume]
+
+**Wording improvements:** [2–3 specific phrase suggestions with before/after examples]
+
+**Rewritten summary:** [a stronger 3–4 sentence professional summary based only on what is in the resume]
+
+**3 improved bullet points:** [rewrite 3 existing bullet points to be more impact-focused]
+
+---
+*Neuronaut analyzes what is on the page. It does not add experience you don't have. Use READMI.app to build the full optimized version.*
+`;
+}
+
 /* ================= API ================= */
 export async function POST(req: Request) {
   try {
@@ -652,6 +793,7 @@ export async function POST(req: Request) {
     let messages: any[] = [];
     let context: any = {};
     let imageBase64: string | null = null;
+    let extractedText = '';
 
     const type = req.headers.get('content-type') || '';
 
@@ -659,11 +801,15 @@ export async function POST(req: Request) {
     if (type.includes('multipart/form-data')) {
       const form = await req.formData();
 
-      const file = form.get('image') as File | null;
+      const file = (form.get('image') ?? form.get('file')) as File | null;
 
       if (file) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        imageBase64 = buffer.toString('base64');
+        if (isDocumentFile(file)) {
+          extractedText = await extractText(file);
+        } else {
+          const buffer = Buffer.from(await file.arrayBuffer());
+          imageBase64 = buffer.toString('base64');
+        }
       }
 
       messages = JSON.parse((form.get('messages') as string) || '[]');
@@ -684,16 +830,63 @@ export async function POST(req: Request) {
     const lastUserMsg =
       [...messages].reverse().find(m => m.role === 'user')?.text || '';
 
+
 const voiceTrigger =
   /voz|voice|sound|mudou sua voz|changed voice/i.test(lastUserMsg);
 
     if (containsBlockedContent(lastUserMsg)) {
       return NextResponse.json({
-        reply: 'I can’t help with harm or crisis topics. Let’s stay focused.'
+        reply: "I can't help with harm or crisis topics. Let's stay focused."
       });
     }
 
+  /* ================= RESUME PATH ================= */
 
+if (RESUME_INTENT.test(lastUserMsg) && extractedText.length > 100) {
+  const lang = context?.lang || detectLang(lastUserMsg);
+  const langName = LANG_NAMES[lang];
+  const prompt = resumePrompt(extractedText, lastUserMsg, langName);
+
+  const resumeCompletion = await openai.chat.completions.create({
+    model: 'gpt-4.1',
+    temperature: 0.3,
+    max_tokens: 2500,
+    messages: [
+      { role: 'system', content: prompt },
+    ],
+  });
+
+  const reply =
+    resumeCompletion.choices[0]?.message?.content?.trim() || '';
+
+  return NextResponse.json({ reply });
+}
+
+/* ================= FINANCE GUEST RETURN ================= */
+
+const lang = context?.lang || detectLang(lastUserMsg);
+
+const financeMode =
+  context?.reason === 'finance' ||
+  context?.reason === 'finances' ||
+  (lastUserMsg &&
+   /\b(money|finances|debt|bills|broke|income|salary|savings|refund|overpaid|unclaimed|financial|dinheiro|finanças|dívida|dinheiro esquecido|valores a receber|dinero|finanzas|deuda|argent|finances)\b/i.test(lastUserMsg));
+
+if (financeMode && !context?.userId) {
+  const alreadyShown = messages.some(
+    (m: any) => m.role === 'assistant' && (
+      m.text?.includes('Sign in for free') ||
+      m.text?.includes('Entre grátis') ||
+      m.text?.includes('Inicia sesión gratis') ||
+      m.text?.includes('Connectez-vous gratuitement')
+    )
+  );
+  if (!alreadyShown) {
+    return NextResponse.json({
+      reply: FINANCE_GUEST_REPLY[lang] || FINANCE_GUEST_REPLY.en
+    });
+  }
+}
 
 /* ================= TOPIC DETECTION ================= */
 
@@ -776,7 +969,6 @@ if (context?.userId) {
 
     }
 
-    const lang = context?.lang || detectLang(lastUserMsg);
     const langName = LANG_NAMES[lang];
 
     const futurePathsMode =
@@ -846,6 +1038,22 @@ simulate Path A vs Path B and recommend direction.
 
     }
 
+    if (financeMode && context?.userId) {
+      systemPrompt += FINANCE_UNCLAIMED_LAYER;
+
+      if (userCountry) {
+        systemPrompt += `\nCOUNTRY CONTEXT: User country is "${userCountry}". Do not ask for country. Use it directly for country-specific official guidance in Step 2.`;
+      } else {
+        const countryQ: Record<string, string> = {
+          en: "Which country have you lived in or had financial activity in?",
+          pt: "Em qual país você já teve contas ou atividade financeira?",
+          es: "¿En qué país has tenido cuentas o actividad financiera?",
+          fr: "Dans quel pays avez-vous eu une activité financière ?",
+        };
+        systemPrompt += `\nCOUNTRY CONTEXT: Country is unknown. In Step 1, ask exactly this ONE question: "${countryQ[lang] || countryQ.en}". Keep it within the 2–4 sentence limit. Ask only once — do not repeat if already asked. Wait for the answer before giving country-specific guidance in Step 2.`;
+      }
+    }
+
     systemPrompt += `
 Behavior:
 - greet by name if known
@@ -865,6 +1073,7 @@ if (voiceTrigger) {
       { role:'system', content: systemPrompt },
 
       ...(imageBase64
+        // 1️⃣ REAL IMAGE → vision path (png/jpeg/gif/webp only)
         ? [{
             role:'user',
             content:[
@@ -875,6 +1084,14 @@ if (voiceTrigger) {
               }
             ]
           }]
+        : extractedText
+        // 2️⃣ DOCUMENT (pdf/doc/docx/txt) → inject text, never vision
+        ? messages.map((m, idx, arr) =>
+            idx === arr.length - 1 && m.role === 'user'
+              ? { role:'user', content:`${m.text}\n\n[Document content:]\n${extractedText}` }
+              : { role:m.role, content:m.text }
+          )
+        // 3️⃣ PLAIN TEXT CHAT → normal messages
         : messages.map(m => ({
             role:m.role,
             content:m.text

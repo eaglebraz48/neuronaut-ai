@@ -1109,8 +1109,20 @@ form.append(
 );
 
 /* se tiver imagem selecionada */
+/* se tiver arquivo selecionado */
 if (selectedImage) {
-  form.append('image', selectedImage);
+  const name = selectedImage.name.toLowerCase();
+  const isDoc =
+    name.endsWith('.pdf') ||
+    name.endsWith('.doc') ||
+    name.endsWith('.docx') ||
+    name.endsWith('.txt');
+
+  if (isDoc) {
+    form.append('file', selectedImage);
+  } else {
+    form.append('image', selectedImage);
+  }
 }
 
 const res = await fetch('/api/agent', {
@@ -2046,7 +2058,7 @@ const intro = T.moodSelected(moodText);
             <div className="chat-controls">
               <input
                 type="file"
-                accept="image/*"
+                accept=".pdf,.doc,.docx,.txt,image/*"
                 onChange={(e) => setSelectedImage(e.target.files?.[0] || null)}
                 style={{ marginBottom: 8 }}
               />

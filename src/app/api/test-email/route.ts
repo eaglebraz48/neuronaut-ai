@@ -47,86 +47,102 @@ if (key.trim() !== process.env.EMAIL_TRIGGER_KEY.trim()) {
 
   const html = `
 <p><strong>🇧🇷 Português</strong></p>
-<p>Oi,</p>
-<p>O Neuronaut te ajuda a tomar decisões melhores sobre trabalho, dinheiro e próximos passos — de forma simples e direta.</p>
-<p>Estamos lançando novas funções, e por enquanto ainda está gratuito.</p>
-<p>Se você está gostando, compartilhe com amigos e familiares.</p>
 
-<p><strong>Abra o Neuronaut:</strong></p>
+<p>Oi,</p>
+
+<p>O Dia das Mães está chegando — e às vezes a parte mais difícil não é comprar um presente… é escolher o presente certo.</p>
+
+<p>O Zolarus ajuda você a encontrar ideias de presentes com base no estilo, personalidade e orçamento da pessoa.</p>
+
+<p>E o Neuronaut continua gratuito por enquanto para te ajudar com clareza, decisões e próximos passos da vida.</p>
+
+<p><strong>Experimente:</strong></p>
+
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
-<a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
+🎁 <a href="https://zolarus.com">Abrir Zolarus</a>
 </p>
 
-<p><strong>Outros apps da Arison8:</strong></p>
-<ul>
-  <li><strong>READMI</strong> — feedback direto sobre imagem, presença e primeira impressão.</li>
-  <li><strong>Moo Fridge</strong> — organização simples para geladeira, comida e rotina.</li>
-  <li><strong>Don’t Do It</strong> — um app direto para ajudar você a pausar antes de tomar decisões impulsivas.</li>
-</ul>
+<p>
+📱 <a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">Android</a> |
+🍎 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">iPhone</a>
+</p>
+
+<p>Se estiver gostando, compartilhe com amigos e família.</p>
 
 <hr/>
 
 <p><strong>🇺🇸 English</strong></p>
-<p>Hey,</p>
-<p>Neuronaut helps you make better decisions about work, money, and your next steps — fast and clear.</p>
-<p>New features are being added, and it’s still free for now.</p>
-<p>If you’re enjoying it, share it with friends and family.</p>
 
-<p><strong>Open Neuronaut:</strong></p>
+<p>Hey,</p>
+
+<p>Mother’s Day is coming up — and sometimes the hardest part isn’t buying a gift… it’s choosing the right one.</p>
+
+<p>Zolarus helps you discover gift ideas based on someone’s personality, style, and your budget.</p>
+
+<p>And Neuronaut is still free for now to help you with clarity, decisions, and your next steps in life.</p>
+
+<p><strong>Try them:</strong></p>
+
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
-<a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
+🎁 <a href="https://zolarus.com">Open Zolarus</a>
 </p>
 
-<p><strong>Other apps by Arison8:</strong></p>
-<ul>
-  <li><strong>READMI</strong> — direct feedback on image, presence, and first impression.</li>
-  <li><strong>Moo Fridge</strong> — simple organization for your fridge, food, and routine.</li>
-  <li><strong>Don’t Do It</strong> — a direct app to help you pause before impulsive decisions.</li>
-</ul>
+<p>
+📱 <a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">Android</a> |
+🍎 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">iPhone</a>
+</p>
+
+<p>If you’re enjoying them, share them with friends and family.</p>
 
 <hr/>
 
 <p><strong>🇪🇸 Español</strong></p>
-<p>Hola,</p>
-<p>Neuronaut te ayuda a tomar mejores decisiones sobre trabajo, dinero y tus próximos pasos.</p>
-<p>Se están agregando nuevas funciones y todavía es gratis por ahora.</p>
-<p>Si te gusta, compártelo con amigos y familia.</p>
 
-<p><strong>Abre Neuronaut:</strong></p>
+<p>Hola,</p>
+
+<p>El Día de las Madres se acerca — y a veces lo más difícil no es comprar un regalo… sino elegir el regalo correcto.</p>
+
+<p>Zolarus te ayuda a encontrar ideas de regalos según la personalidad, el estilo y tu presupuesto.</p>
+
+<p>Y Neuronaut sigue siendo gratis por ahora para ayudarte con claridad, decisiones y tus próximos pasos.</p>
+
+<p><strong>Pruébalos:</strong></p>
+
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
-<a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
+🎁 <a href="https://zolarus.com">Abrir Zolarus</a>
 </p>
 
-<p><strong>Otros apps de Arison8:</strong></p>
-<ul>
-  <li><strong>READMI</strong> — feedback directo sobre imagen, presencia y primera impresión.</li>
-  <li><strong>Moo Fridge</strong> — organización simple para tu nevera, comida y rutina.</li>
-  <li><strong>Don’t Do It</strong> — una app directa para ayudarte a pausar antes de decisiones impulsivas.</li>
-</ul>
+<p>
+📱 <a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">Android</a> |
+🍎 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">iPhone</a>
+</p>
+
+<p>Si te gustan, compártelos con amigos y familia.</p>
 
 <hr/>
 
 <p><strong>🇫🇷 Français</strong></p>
-<p>Salut,</p>
-<p>Neuronaut vous aide à prendre de meilleures décisions sur le travail, l’argent et vos prochaines étapes.</p>
-<p>De nouvelles fonctionnalités arrivent, et c’est encore gratuit pour le moment.</p>
-<p>Si vous aimez l’app, partagez-la avec vos proches.</p>
 
-<p><strong>Ouvrir Neuronaut :</strong></p>
+<p>Salut,</p>
+
+<p>La Fête des Mères approche — et parfois, le plus difficile n’est pas d’acheter un cadeau… mais de choisir le bon.</p>
+
+<p>Zolarus vous aide à trouver des idées cadeaux selon la personnalité, le style et votre budget.</p>
+
+<p>Et Neuronaut est toujours gratuit pour le moment pour vous aider avec plus de clarté, de décisions et vos prochaines étapes.</p>
+
+<p><strong>Essayez-les :</strong></p>
+
 <p>
-<a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">📱 Android</a> |
-<a href="https://apps.apple.com/us/app/neuronaut/id6758070764">🍎 iPhone</a>
+🎁 <a href="https://zolarus.com">Ouvrir Zolarus</a>
 </p>
 
-<p><strong>Autres apps par Arison8 :</strong></p>
-<ul>
-  <li><strong>READMI</strong> — feedback direct sur l’image, la présence et la première impression.</li>
-  <li><strong>Moo Fridge</strong> — organisation simple pour le frigo, la nourriture et la routine.</li>
-  <li><strong>Don’t Do It</strong> — une app directe pour vous aider à faire une pause avant les décisions impulsives.</li>
-</ul>
+<p>
+📱 <a href="https://play.google.com/store/apps/details?id=ai.neuronaut.app">Android</a> |
+🍎 <a href="https://apps.apple.com/us/app/neuronaut/id6758070764">iPhone</a>
+</p>
+
+<p>Si vous aimez les apps, partagez-les avec vos proches.</p>
 `
 
   let sent = 0
@@ -139,7 +155,7 @@ if (key.trim() !== process.env.EMAIL_TRIGGER_KEY.trim()) {
       await resend.emails.send({
         from: 'Neuronaut <support@arison8.com>',
         to: user.email,
-        subject: 'Neuronaut is still free — plus more apps by Arison8',
+   subject: 'Mother’s Day is coming — let AI help you choose the right gift',
         html,
       })
       sent++
