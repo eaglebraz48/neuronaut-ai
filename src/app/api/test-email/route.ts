@@ -154,8 +154,8 @@ if (key.trim() !== process.env.EMAIL_TRIGGER_KEY.trim()) {
     try {
       await resend.emails.send({
         from: 'Neuronaut <support@arison8.com>',
-      to: 'matt.sousa241@gmail.com',
-   subject: 'Mother’s Day is coming — let AI help you choose the right gift',
+     to: user.email,
+        subject: "Mother’s Day is coming — let AI help you choose the right gift",
         html,
       })
       sent++
