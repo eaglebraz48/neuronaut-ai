@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
  * - Completely skipped in the browser, so the existing Firebase Web SDK
  *   notification flow in DashboardClientNotes.tsx is unaffected.
  * - Requests OS permission, registers with FCM, and saves the token to
- *   profiles.fcm_token via Supabase upsert.
+ *   profiles.fcm_token via Supabase update.
  */
 
 export function usePushToken() {

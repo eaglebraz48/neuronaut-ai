@@ -773,15 +773,14 @@ const syncFCMToken = async (uid: string, email?: string | null) => {
 
     if (!token) return;
 
-    await supabase.from('profiles').upsert(
-      {
-        user_id: uid,
-        email: email ?? null,
+    const { error: fcmErr } = await supabase
+      .from('profiles')
+      .update({
         fcm_token: token,
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' }
-    );
+      })
+      .eq('user_id', uid);
+    if (fcmErr) console.error('[FCM] token save error:', fcmErr);
 
   } catch (err) {
     console.error('FCM ERROR:', err);
@@ -921,11 +920,11 @@ setChecked(true);
           serviceWorkerRegistration: swReg,
         });
         if (token) {
-          await supabase.from('profiles').upsert({
-  user_id: uid,
-  fcm_token: token,
-  updated_at: new Date().toISOString(),
-}, { onConflict: 'user_id' });
+          const { error: fcmErr2 } = await supabase
+            .from('profiles')
+            .update({ fcm_token: token, updated_at: new Date().toISOString() })
+            .eq('user_id', uid);
+          if (fcmErr2) console.error('[FCM] token save error (signin):', fcmErr2);
         }
       }
     } else if (typeof Notification !== 'undefined' && permission === 'default' && !notifAsked) {
@@ -1029,11 +1028,11 @@ if (currentPermission === 'default') {
           serviceWorkerRegistration: swReg,
         });
         if (token) {
-      await supabase.from('profiles').upsert({
-  user_id: uid,
-  fcm_token: token,
-  updated_at: new Date().toISOString(),
-}, { onConflict: 'user_id' });
+          const { error: fcmErr3 } = await supabase
+            .from('profiles')
+            .update({ fcm_token: token, updated_at: new Date().toISOString() })
+            .eq('user_id', uid);
+          if (fcmErr3) console.error('[FCM] token save error (auth change):', fcmErr3);
         }
       }
     }
@@ -1968,12 +1967,13 @@ const { data: { user: freshUser } } = await supabase.auth.getUser();
 const freshUid = freshUser?.id;
 
 if (freshUid) {
-  const { error } = await supabase.from('profiles').upsert({
-  user_id: freshUid,
-  email: userEmail ?? null, // 👈 add this
-  onboarding_completed: true,
-  updated_at: new Date().toISOString(),
-}, { onConflict: 'user_id' });
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      onboarding_completed: true,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', freshUid);
 
   if (error) console.error('Profile save error:', error);
 }
