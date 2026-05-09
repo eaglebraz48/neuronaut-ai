@@ -42,20 +42,43 @@ export function usePushToken() {
 
             try {
               const { data: { user } } = await supabase.auth.getUser();
-              if (!user) return;
+              if (!user) {
+                console.warn('[usePushToken] No authenticated user — skipping FCM save');
+                return;
+              }
 
-              await supabase
+              console.log('[usePushToken] Saving FCM token for user:', user.id);
+
+              const { error } = await supabase
                 .from('profiles')
-                .upsert(
-                  {
-                    user_id: user.id,
+                .update({
+                  fcm_token: token.value,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('user_id', user.id);
+
+              if (error) {
+                console.error('[usePushToken] FCM save error (user_id):', error);
+
+                // Fallback: try with 'id' column in case schema uses that
+                const { error: error2 } = await supabase
+                  .from('profiles')
+                  .update({
                     fcm_token: token.value,
                     updated_at: new Date().toISOString(),
-                  },
-                  { onConflict: 'user_id' }
-                );
+                  })
+                  .eq('id', user.id);
+
+                if (error2) {
+                  console.error('[usePushToken] FCM save error (id fallback):', error2);
+                } else {
+                  console.log('[usePushToken] FCM token saved via id column');
+                }
+              } else {
+                console.log('[usePushToken] FCM token saved successfully');
+              }
             } catch (err) {
-              console.error('[usePushToken] Supabase upsert failed:', err);
+              console.error('[usePushToken] Supabase update failed:', err);
             }
           }
         );

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "493925434963",
+    "project_id": "neuronaut-ai",
+    "storage_bucket": "neuronaut-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:493925434963:android:7f1c91e66d450dc95828a6",
+        "android_client_info": {
+          "package_name": "ai.neuronaut.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD50-iV-u0TiCWQAL7iw-gMk-H9vS2J3_E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
