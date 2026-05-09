@@ -762,7 +762,7 @@ const syncFCMToken = async (uid: string, email?: string | null) => {
     const messaging = getMessagingSafe();
     if (!messaging || !('serviceWorker' in navigator)) return;
 
-    if (Notification.permission !== 'granted') return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
     const swReg = await navigator.serviceWorker.ready;
 
@@ -928,7 +928,7 @@ setChecked(true);
 }, { onConflict: 'user_id' });
         }
       }
-    } else if (permission === 'default' && !notifAsked) {
+    } else if (typeof Notification !== 'undefined' && permission === 'default' && !notifAsked) {
       setShowNotifModal(true);
       if (isStandalone) setShowIOSFix(true);
     }
@@ -1627,7 +1627,7 @@ if (existing) {
       const messaging = getMessagingSafe();
 
       if (messaging && 'serviceWorker' in navigator) {
-        if (Notification.permission === 'granted') {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const swReg = await navigator.serviceWorker.ready;
 
           const token = await getToken(messaging, {
