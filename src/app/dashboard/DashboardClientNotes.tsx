@@ -10,7 +10,7 @@ import { getToken } from 'firebase/messaging';
 import { getMessagingSafe } from '@/lib/firebase';
 import { usePushToken } from '@/hooks/usePushToken';
 
-
+console.log("BUILD_ID: May9-fix1");
 
 let voiceCooldown = false;
 
